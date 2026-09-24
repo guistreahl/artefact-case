@@ -1,0 +1,25 @@
+# dependências e build
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# testes
+coverage/
+test-results/
+playwright-report/
+playwright/.cache/
+
+# nunca versionar: segredos, estado do Terraform, material do enunciado
+.env*
+*.pem
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform/
+*.pdf
+
+# sistema
+.DS_Store
+Thumbs.db

@@ -1,0 +1,107 @@
+# Publica no Cloud Run cada commit da main que passou no CI.
+#
+# Autenticação por Workload Identity Federation: o GitHub prova por OIDC que a
+# execução veio deste repositório, na main, e o Google devolve uma credencial
+# de vida curta. Não existe chave de service account guardada em lugar nenhum.
+
+name: deploy
+
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+# Um deploy de cada vez, em fila. Sem cancelamento: interromper um deploy no
+# meio deixa o serviço num estado que ninguém escolheu.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  PROJETO: ${{ vars.GCP_PROJETO }}
+  REGIAO: us-central1
+  SERVICO: tarefas
+  REPOSITORIO: servicos
+  DOMINIO: tarefas.guistreahl.com.br
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write # emite o token OIDC trocado pela credencial do Google
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # O commit que passou no CI, e não o que estiver na main agora.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Identificar a versão
+        run: |
+          SHA=$(git rev-parse HEAD)
+          echo "SHA=$SHA" >> "$GITHUB_ENV"
+          echo "TAG=sha-${SHA:0:7}" >> "$GITHUB_ENV"
+          echo "IMAGEM=${REGIAO}-docker.pkg.dev/${PROJETO}/${REPOSITORIO}/${SERVICO}:${SHA}" >> "$GITHUB_ENV"
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Montar e publicar a imagem
+        run: |
+          gcloud auth configure-docker "${REGIAO}-docker.pkg.dev" --quiet
+          docker build -t "$IMAGEM" .
+          docker push "$IMAGEM"
+
+      - name: Criar a revisão, sem tráfego
+        run: |
+          gcloud run deploy "$SERVICO" \
+            --image "$IMAGEM" \
+            --region "$REGIAO" \
+            --no-traffic \
+            --tag "$TAG" \
+            --quiet
+          URL=$(gcloud run services describe "$SERVICO" --region "$REGIAO" --format=json \
+            | jq -r --arg tag "$TAG" '.status.traffic[] | select(.tag == $tag) | .url')
+          echo "URL_REVISAO=$URL" >> "$GITHUB_ENV"
+          echo "Revisão nova em $URL"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Testar a revisão nova antes de liberar
+        env:
+          BASE_URL: ${{ env.URL_REVISAO }}
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+
+      - name: Liberar o tráfego
+        run: |
+          gcloud run services update-traffic "$SERVICO" --region "$REGIAO" --to-tags "$TAG=100" --quiet
+          # As tags só servem para testar cada revisão antes de liberar. As
+          # antigas saem, para a lista não crescer a cada deploy.
+          ANTIGAS=$(gcloud run services describe "$SERVICO" --region "$REGIAO" --format=json \
+            | jq -r --arg tag "$TAG" '[.status.traffic[] | select(.tag and .tag != $tag) | .tag] | join(",")')
+          if [ -n "$ANTIGAS" ]; then
+            gcloud run services update-traffic "$SERVICO" --region "$REGIAO" --remove-tags "$ANTIGAS" --quiet
+          fi
+
+      - name: Conferir o serviço no ar
+        run: |
+          URL=$(gcloud run services describe "$SERVICO" --region "$REGIAO" --format='value(status.url)')
+          curl -fsS "$URL/api/saude"
+          # O domínio depende do DNS e do certificado, que ficam fora da
+          # esteira. Se ele não responder, o deploy não falha, mas avisa.
+          curl -fsS --max-time 10 "https://${DOMINIO}/api/saude" || echo "::warning::https://${DOMINIO} não respondeu. Conferir DNS e certificado."

@@ -1,0 +1,46 @@
+{
+  "name": "case-artefact-tarefas",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Gerenciador de tarefas em Next.js 15 com tRPC",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "node scripts/iniciar.mjs",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.103.2",
+    "@trpc/client": "^11.19.0",
+    "@trpc/server": "^11.19.0",
+    "@trpc/tanstack-react-query": "^11.19.0",
+    "next": "^15.5.26",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "server-only": "^0.0.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.7",
+    "@playwright/test": "^1.63.0",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^22.20.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^15.5.26",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.1"
+  },
+  "overrides": {
+    "postcss": "^8.5.23"
+  }
+}

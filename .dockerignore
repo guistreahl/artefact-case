@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.github
+infra
+docs
+e2e
+test-results
+playwright-report
+*.md
+*.pdf
+.env*
+Dockerfile
+.dockerignore
