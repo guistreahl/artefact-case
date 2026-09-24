@@ -14,7 +14,6 @@ type Props = { searchParams: Promise<{ help?: string }> };
 export default async function ListPage({ searchParams }: Props) {
   const { help } = await searchParams;
   const welcomeSeen = (await cookies()).has(WELCOME_COOKIE);
-  const fromMenu = help === "1";
 
   // SSR: the first page is fetched here, on the server, and goes out in the
   // HTML. HydrationBoundary hands the same data to the client cache, which
@@ -26,7 +25,7 @@ export default async function ListPage({ searchParams }: Props) {
 
   return (
     <>
-      {(!welcomeSeen || fromMenu) && <Welcome fromMenu={fromMenu} />}
+      <Welcome initiallyOpen={!welcomeSeen || help === "1"} />
       <h1 className="page-title mb-6">Your tasks</h1>
       <HydrationBoundary state={dehydrate(queryClient)}>
         <TaskList />

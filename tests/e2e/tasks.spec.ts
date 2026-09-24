@@ -151,6 +151,35 @@ test("the welcome panel shows on the first visit and comes back from the menu", 
   await expect(page).toHaveURL(/\/$/);
 });
 
+test("closing the panel and clicking How to use right away shows it again", async ({ page }) => {
+  const panel = page.getByRole("region", { name: /Your tasks, only yours/ });
+  await page.goto("/");
+
+  // No reload and no pause in between: a quick close-then-click.
+  for (let i = 0; i < 3; i++) {
+    await page.getByRole("button", { name: "Got it, let's start" }).click();
+    await expect(panel).toHaveCount(0);
+    await page.getByRole("link", { name: "How to use" }).click();
+    await expect(panel).toBeVisible();
+  }
+});
+
+test("How to use from another page opens the list with the panel", async ({ page }) => {
+  const panel = page.getByRole("region", { name: /Your tasks, only yours/ });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Got it, let's start" }).click();
+
+  await page.getByRole("link", { name: "New task", exact: true }).click();
+  await page.getByRole("link", { name: "How to use" }).click();
+  await expect(page).toHaveURL(/\/\?help=1$/);
+  await expect(panel).toBeVisible();
+
+  await page.getByRole("button", { name: "Got it, let's start" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await page.reload();
+  await expect(panel).toHaveCount(0);
+});
+
 test("the delete notice is visible even with the list scrolled to the end", async ({ page }) => {
   await page.goto("/");
   await scrollToEnd(page);

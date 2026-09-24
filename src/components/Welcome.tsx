@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { WELCOME_COOKIE } from "@/lib/constants";
+import { useEffect, useState } from "react";
+import { SHOW_WELCOME_EVENT, WELCOME_COOKIE } from "@/lib/constants";
 
 const STEPS = [
   { name: "Complete", text: "Tick the circle next to a task. Click again to reopen it." },
@@ -13,23 +12,34 @@ const STEPS = [
   { name: "Scroll", text: "The list loads 10 at a time as you get close to the end." },
 ];
 
-type Props = { fromMenu: boolean };
+type Props = { initiallyOpen: boolean };
 
 /**
- * Panel shown on the first visit. The server decides whether it appears, by
- * reading the cookie, so the page already arrives with or without the panel
- * and nothing flickers.
+ * Panel shown on the first visit. The server decides whether it starts open,
+ * by reading the cookie, so the page already arrives with or without the
+ * panel and nothing flickers. It is always mounted on the list page, so the
+ * "How to use" link can reopen it in place.
  */
-export function Welcome({ fromMenu }: Props) {
-  const [open, setOpen] = useState(true);
-  const router = useRouter();
+export function Welcome({ initiallyOpen }: Props) {
+  const [open, setOpen] = useState(initiallyOpen);
+
+  useEffect(() => {
+    function show() {
+      setOpen(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    window.addEventListener(SHOW_WELCOME_EVENT, show);
+    return () => window.removeEventListener(SHOW_WELCOME_EVENT, show);
+  }, []);
 
   if (!open) return null;
 
   function close() {
     document.cookie = `${WELCOME_COOKIE}=seen; path=/; max-age=31536000; samesite=lax`;
     setOpen(false);
-    if (fromMenu) router.replace("/", { scroll: false });
+    // Coming from another page, the URL carries ?help=1. It is cleaned without
+    // a navigation, so a reload does not bring the panel back.
+    if (window.location.search) window.history.replaceState(null, "", "/");
   }
 
   return (

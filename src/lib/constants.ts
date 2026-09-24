@@ -7,3 +7,6 @@ export const PAGE_SIZE = 10;
 
 /** Marks that the welcome panel was already closed in this browser. */
 export const WELCOME_COOKIE = "welcome";
+
+/** Fired by the "How to use" link to reopen the welcome panel in place. */
+export const SHOW_WELCOME_EVENT = "show-welcome";

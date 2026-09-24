@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import Link from "next/link";
+import { HelpLink } from "@/components/HelpLink";
 import { ToastProvider } from "@/components/Toasts";
 import { Providers } from "@/trpc/client";
 import "./globals.css";
@@ -42,12 +43,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   gerenciador<span className="text-magenta">.</span>
                 </Link>
                 <nav className="flex items-center gap-2">
-                  <Link
-                    href="/?help=1"
-                    className="rounded px-3 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
-                  >
-                    How to use
-                  </Link>
+                  <HelpLink className="rounded px-3 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white" />
                   <Link href="/tasks/new" className="btn-primary">
                     New task
                   </Link>
