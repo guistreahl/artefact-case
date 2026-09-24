@@ -73,6 +73,7 @@ export class RepositorioTarefas {
       id: crypto.randomUUID(),
       titulo: dados.titulo,
       descricao: dados.descricao,
+      concluida: false,
       dataCriacao: this.agora().toISOString(),
     };
     tarefas.set(tarefa.id, tarefa);
@@ -83,8 +84,17 @@ export class RepositorioTarefas {
     const tarefas = this.lista(sessao);
     const atual = tarefas.get(id);
     if (!atual) return undefined;
-    // id e dataCriacao nunca mudam numa edição.
+    // id, dataCriacao e concluida não mudam pelo formulário de edição.
     const atualizada: Tarefa = { ...atual, titulo: dados.titulo, descricao: dados.descricao };
+    tarefas.set(id, atualizada);
+    return atualizada;
+  }
+
+  definirConclusao(sessao: string, id: string, concluida: boolean): Tarefa | undefined {
+    const tarefas = this.lista(sessao);
+    const atual = tarefas.get(id);
+    if (!atual) return undefined;
+    const atualizada: Tarefa = { ...atual, concluida };
     tarefas.set(id, atualizada);
     return atualizada;
   }
@@ -109,7 +119,7 @@ function compararComCursor(tarefa: Tarefa, cursor: string): number {
   const separador = cursor.indexOf("_");
   const dataCriacao = cursor.slice(0, separador);
   const id = cursor.slice(separador + 1);
-  return compararMaisNovaPrimeiro(tarefa, { id, dataCriacao, titulo: "" });
+  return compararMaisNovaPrimeiro(tarefa, { id, dataCriacao, titulo: "", concluida: false });
 }
 
 // Uma única instância por processo. Guardada em globalThis porque o `next dev`

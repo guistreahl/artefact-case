@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { criarRouter, procedimento } from "../trpc";
 import {
   atualizarTarefaSchema,
+  concluirTarefaSchema,
   dadosTarefaSchema,
   listarTarefasSchema,
   idSchema,
@@ -40,6 +41,16 @@ export const tarefasRouter = criarRouter({
     .mutation(
       ({ ctx, input: { id, ...dados } }) =>
         ctx.repositorio.atualizar(ctx.sessao, id, dados) ?? naoEncontrada(id),
+    ),
+
+  // Separado de `atualizar`: marcar na lista não reenvia título e descrição,
+  // e não passa pela validação do formulário.
+  concluir: procedimento
+    .input(concluirTarefaSchema)
+    .mutation(
+      ({ ctx, input }) =>
+        ctx.repositorio.definirConclusao(ctx.sessao, input.id, input.concluida) ??
+        naoEncontrada(input.id),
     ),
 
   remover: procedimento.input(porId).mutation(({ ctx, input }) => {

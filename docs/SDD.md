@@ -3,7 +3,7 @@
 Arquitetura do projeto: o que o case pede, o que foi entregue e como as
 partes se conectam, da tela até o Cloud Run.
 
-Publicado em `https://tarefas.guistreahl.com.br`.
+Publicado em `https://gerenciador.guistreahl.com.br`.
 
 ---
 
@@ -30,17 +30,17 @@ Publicado em `https://tarefas.guistreahl.com.br`.
 
 ## 2. O que foi entregue
 
-### Requisitos do case
+### 2.1 Requisitos do case
 
 | # | Como foi atendido | Onde |
 |---|---|---|
 | C1 | Next.js 15.5 (App Router) e tRPC 11 com TanStack Query | `src/trpc/`, `src/app/api/trpc/` |
 | C2 | `id` com `crypto.randomUUID()` e `dataCriacao` definidos pelo servidor | `src/server/tarefas/store.ts` |
-| C3 | Procedimentos `listar`, `obter`, `criar`, `atualizar` e `remover` | `src/server/tarefas/router.ts` |
+| C3 | Procedimentos `listar`, `obter`, `criar`, `atualizar` e `remover` (mais `concluir`, seção 2.2) | `src/server/tarefas/router.ts` |
 | C4 | `Map` em memória no processo do servidor | `src/server/tarefas/store.ts` |
 | C5 | O mesmo schema Zod valida no formulário e no servidor | `src/server/tarefas/schema.ts` |
 | C6 | `NOT_FOUND` para `id` inexistente, `BAD_REQUEST` com o erro de cada campo | `src/server/tarefas/router.ts`, `src/server/trpc.ts` |
-| C7 | Server Component busca a primeira página e entrega o cache hidratado ao cliente | `src/app/(lista)/page.tsx` |
+| C7 | Server Component busca a primeira página e entrega o cache hidratado ao cliente | `src/app/page.tsx` |
 | C8 | Exclusão otimista: a tarefa sai na hora e volta com aviso se o servidor recusar | `src/components/ListaTarefas.tsx` |
 | C9 | Um único `FormTarefa` para criar e editar, com `useState` | `src/components/FormTarefa.tsx` |
 | C10 | Envio bloqueado com título vazio, erro mostrado embaixo do campo | `src/components/FormTarefa.tsx` |
@@ -49,12 +49,15 @@ Publicado em `https://tarefas.guistreahl.com.br`.
 | C13 | Comentários nos pontos de decisão, README e este documento | todo o repositório |
 | C14 | Tarefas de exemplo fictícias, nenhuma chave ou segredo no repositório | seção 6.3 |
 
-### Além do enunciado
+### 2.2 Além do enunciado
 
 | O quê | Por quê |
 |---|---|
+| Campo `concluida` e procedimento `concluir` | É a ação mais comum numa lista de tarefas. O case pede "pelo menos" os quatro campos, então o modelo pode crescer |
 | Uma lista por visitante | O endereço é público. Com uma lista única, cada pessoa veria o que as anteriores escreveram (seção 3.3) |
+| Painel de boas-vindas e tarefas-roteiro | Quem abre a aplicação pela primeira vez aprende a usar sem ler documentação (seção 3.6) |
 | Tarefas de exemplo em toda sessão nova | A lista nunca abre vazia e a rolagem infinita tem o que carregar |
+| Design system próprio | Paleta e tipografia inspiradas na identidade da Artefact, em tokens (seção 3.7) |
 | Testes de unidade e de navegador | Vitest no router, Playwright no fluxo completo de criar, editar, excluir e rolar |
 | Publicação no Cloud Run | A aplicação no ar, com deploy automático a cada push na `main` |
 | Infraestrutura em Terraform | Todo recurso do Google Cloud descrito no repositório |
@@ -102,23 +105,24 @@ src/
   app/
     api/trpc/[trpc]/route.ts     adaptador HTTP do tRPC
     api/saude/route.ts           verificação de saúde do Cloud Run
-    (lista)/page.tsx             listagem
-    (lista)/loading.tsx          esqueleto enquanto a listagem carrega
+    page.tsx                     listagem
     tarefas/nova/page.tsx        criação
     tarefas/[id]/editar/page.tsx edição
   components/
     ListaTarefas.tsx
     FormTarefa.tsx
     Aviso.tsx
+    BoasVindas.tsx         painel da primeira visita
   middleware.ts            emite o cookie de sessão na primeira visita
 e2e/                       testes do Playwright
 infra/                     Terraform
 scripts/iniciar.mjs        sobe o build standalone localmente
 ```
 
-O `loading.tsx` fica só no grupo da listagem. Na raiz, ele faria o Next
-começar a enviar toda página antes de ela terminar, e a edição de uma tarefa
-inexistente responderia com status 200 em vez de 404.
+Não há `loading.tsx`. Com ele, o Next começa a enviar a página antes de ela
+terminar, e a edição de uma tarefa inexistente responderia com status 200 em
+vez de 404. A espera entre salvar o formulário e ver a lista já é indicada
+pelo botão "Salvando...".
 
 ### 3.3 Estado em memória e sessão
 
@@ -143,6 +147,7 @@ type Tarefa = {
   id: string;          // crypto.randomUUID()
   titulo: string;      // 1 a 120 caracteres, sem espaços nas pontas
   descricao?: string;  // até 1000 caracteres
+  concluida: boolean;  // toda tarefa nasce pendente
   dataCriacao: string; // ISO 8601, definido pelo servidor
 };
 ```
@@ -153,6 +158,7 @@ type Tarefa = {
 | `tarefas.obter` | query | `{ id }` | `NOT_FOUND` |
 | `tarefas.criar` | mutation | `{ titulo, descricao? }` | `BAD_REQUEST`, `TOO_MANY_REQUESTS` |
 | `tarefas.atualizar` | mutation | `{ id, titulo, descricao? }` | `BAD_REQUEST`, `NOT_FOUND` |
+| `tarefas.concluir` | mutation | `{ id, concluida }` | `NOT_FOUND` |
 | `tarefas.remover` | mutation | `{ id }` | `NOT_FOUND` |
 
 `listar` devolve `{ itens, proximoCursor }`, da tarefa mais nova para a mais
@@ -187,6 +193,54 @@ navegador ── HydrationBoundary ──► useInfiniteQuery começa do cache, 
 IntersectionObserver ──► GET /api/trpc/tarefas.listar?cursor=...
 ```
 
+### 3.6 Primeira visita
+
+Na primeira visita, a listagem abre com um painel de boas-vindas que explica
+em cinco passos como concluir, criar, editar, excluir e rolar. Ao fechar, um
+cookie `boas-vindas` registra que ele foi visto. Quem decide mostrar o painel
+é o servidor, lendo esse cookie no SSR, então a página já chega com ou sem
+ele e nada pisca na tela. O link "Como usar" do cabeçalho abre a listagem com
+`?ajuda=1`, e o painel volta.
+
+As cinco primeiras tarefas de exemplo repetem o roteiro na prática: cada uma
+pede uma ação ("Marque esta tarefa como concluída", "Edite esta tarefa") e
+diz o que observar.
+
+### 3.7 Design system
+
+Tokens do Tailwind 4, declarados em `@theme` no `src/app/globals.css`.
+Nenhum componente usa cor fora deles.
+
+| Token | Valor | Uso |
+|---|---|---|
+| `marinho` | `#002244` | Cabeçalho, texto principal, painel |
+| `marinho-profundo` | `#00162e` | Fundo no modo escuro |
+| `marinho-superficie` | `#0a2e55` | Cartões no modo escuro |
+| `magenta` | `#ff0066` | Ponto final dos títulos, borda de tarefa pendente |
+| `magenta-forte` | `#e0005c` | Botões e links |
+| `magenta-claro` | `#ff5c9d` | Links no modo escuro |
+| `turquesa` | `#65cccc` | Tarefa concluída, números do painel |
+| `turquesa-escuro` | `#2ab6bf` | Contorno de foco, borda do aviso de sucesso |
+| `nevoa` | `#f0f0f0` | Fundo no modo claro |
+| `erro` | `#c4231a` | Mensagens de erro |
+
+**Tipografia:** Roboto (300, 400, 500 e 700), servida pelo próprio app com
+`next/font`. Títulos em peso 300.
+
+**Contraste:** o magenta da marca com texto branco fica em 3,9:1, abaixo dos
+4,5:1 exigidos para texto pequeno. Botões e links usam o `magenta-forte`
+(4,9:1), e o magenta puro fica para detalhes decorativos.
+
+**Componentes** (`@layer components`): `titulo-pagina` (com o ponto final em
+magenta), `botao-primario`, `botao-secundario`, `link-acao`, `cartao`,
+`campo`, `texto-suave` e `lambda`, o triângulo com brilho magenta desenhado
+em CSS.
+
+**Marca:** a interface usa a paleta e a tipografia, mas não o logotipo nem o
+nome da empresa como marca do produto.
+
+**Modo escuro** automático, pela preferência do sistema.
+
 ---
 
 ## 4. Infraestrutura
@@ -208,7 +262,7 @@ docker build ──► Artifact Registry   servicos/tarefas:<sha>
                  Cloud Run "tarefas" (us-central1)
                  identidade "tarefas-run", sem papel nenhum
                          ▲
-DNS: CNAME tarefas ► ghs.googlehosted.com + domain mapping do Cloud Run
+DNS: CNAME gerenciador ► ghs.googlehosted.com + domain mapping do Cloud Run
 ```
 
 ### 4.2 Recursos
@@ -223,7 +277,7 @@ Todos descritos em Terraform, em `infra/`.
 | SA `tarefas-run` | Identidade do container. Sem papel, porque a aplicação não chama API do Google |
 | Workload Identity | Pool e provider para o emissor OIDC do GitHub |
 | Cloud Run `tarefas` | Máximo de 1 instância, mínimo de 0, 512 MiB, 1 vCPU, acesso público |
-| Domain mapping | `tarefas.guistreahl.com.br` |
+| Domain mapping | `gerenciador.guistreahl.com.br` |
 
 O projeto e o faturamento ficam fora do Terraform, porque dependem da conta
 de faturamento. O estado do Terraform fica num bucket GCS com versionamento.

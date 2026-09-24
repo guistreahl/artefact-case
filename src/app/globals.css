@@ -1,9 +1,103 @@
 @import "tailwindcss";
 
-:root {
-  color-scheme: light dark;
+/*
+ * Design system
+ *
+ * Paleta e tipografia inspiradas na identidade da Artefact (marinho, magenta,
+ * turquesa e Roboto), sem logo nem nome da marca. Toda cor da interface sai
+ * destes tokens; nenhum componente usa hexadecimal solto.
+ *
+ * Contraste: o magenta da marca (#FF0066) com texto branco fica em 3,9:1,
+ * abaixo do mínimo de 4,5:1 para texto pequeno. Botões e links usam o
+ * magenta-forte (4,9:1), e o magenta puro fica para detalhes decorativos e
+ * textos grandes. O turquesa não é usado como cor de texto sobre fundo claro.
+ */
+@theme {
+  --font-sans: var(--font-roboto), ui-sans-serif, system-ui, sans-serif;
+
+  --color-marinho: #002244;
+  --color-marinho-profundo: #00162e;
+  --color-marinho-superficie: #0a2e55;
+  --color-marinho-borda: #1d4470;
+
+  --color-magenta: #ff0066;
+  --color-magenta-forte: #e0005c;
+  --color-magenta-escuro: #b8004b;
+  --color-magenta-claro: #ff5c9d;
+
+  --color-turquesa: #65cccc;
+  --color-turquesa-escuro: #2ab6bf;
+  --color-turquesa-fundo: #e8f7f7;
+
+  --color-azul: #024189;
+
+  --color-nevoa: #f0f0f0;
+  --color-nevoa-borda: #dcdfe3;
+  --color-grafite: #4a5a6a;
+
+  --color-erro: #c4231a;
+  --color-erro-fundo: #fdeceb;
+  --color-erro-claro: #ff7b72;
 }
 
-body {
-  @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
+@layer base {
+  :root {
+    color-scheme: light dark;
+  }
+
+  body {
+    @apply bg-nevoa font-sans text-marinho antialiased dark:bg-marinho-profundo dark:text-white;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-turquesa-escuro;
+  }
+}
+
+@layer components {
+  /* O ponto final em magenta dos títulos, como nos slides. */
+  .titulo-pagina {
+    @apply text-3xl font-light tracking-tight sm:text-4xl;
+  }
+  .titulo-pagina::after {
+    content: ".";
+    @apply text-magenta;
+  }
+
+  .botao-primario {
+    @apply inline-flex items-center justify-center rounded bg-magenta-forte px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-magenta-escuro disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .botao-secundario {
+    @apply inline-flex items-center justify-center rounded px-4 py-2 text-sm font-medium text-marinho transition-colors hover:bg-nevoa-borda/60 dark:text-white dark:hover:bg-marinho-superficie;
+  }
+
+  .link-acao {
+    @apply rounded px-2 py-1 text-sm font-medium text-magenta-forte transition-colors hover:bg-magenta/10 dark:text-magenta-claro;
+  }
+
+  .cartao {
+    @apply rounded border border-nevoa-borda bg-white shadow-sm dark:border-marinho-borda dark:bg-marinho-superficie;
+  }
+
+  .campo {
+    @apply block w-full rounded border border-nevoa-borda bg-white px-3 py-2 text-marinho shadow-sm placeholder:text-grafite/60 dark:border-marinho-borda dark:bg-marinho-superficie dark:text-white;
+  }
+  .campo[aria-invalid="true"] {
+    @apply border-erro dark:border-erro-claro;
+  }
+
+  .texto-suave {
+    @apply text-grafite dark:text-white/70;
+  }
+
+  /*
+   * O triângulo "Λ" com brilho magenta, desenhado só com CSS. É o gesto
+   * visual que se repete nos slides, sem reproduzir o logotipo.
+   */
+  .lambda {
+    @apply pointer-events-none absolute aspect-[1/1.15];
+    background: radial-gradient(circle at 50% 62%, rgb(255 0 102 / 0.75), rgb(2 65 137 / 0.35) 45%, transparent 75%);
+    clip-path: polygon(50% 0, 100% 100%, 78% 100%, 50% 42%, 22% 100%, 0 100%);
+  }
 }

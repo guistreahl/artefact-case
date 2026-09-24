@@ -24,7 +24,7 @@ env:
   REGIAO: us-central1
   SERVICO: tarefas
   REPOSITORIO: servicos
-  DOMINIO: tarefas.guistreahl.com.br
+  DOMINIO: gerenciador.guistreahl.com.br
 
 jobs:
   deploy:

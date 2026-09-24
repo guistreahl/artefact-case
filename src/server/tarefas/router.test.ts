@@ -68,6 +68,30 @@ describe("atualizar", () => {
   });
 });
 
+describe("concluir", () => {
+  it("toda tarefa nasce pendente, e concluir alterna o estado sem mexer no resto", async () => {
+    const tarefa = await caller().tarefas.criar({ titulo: "Concluir" });
+    expect(tarefa.concluida).toBe(false);
+
+    const concluida = await caller().tarefas.concluir({ id: tarefa.id, concluida: true });
+    expect(concluida).toEqual({ ...tarefa, concluida: true });
+
+    const reaberta = await caller().tarefas.concluir({ id: tarefa.id, concluida: false });
+    expect(reaberta.concluida).toBe(false);
+  });
+
+  it("editar pelo formulário preserva a conclusão", async () => {
+    const tarefa = await caller().tarefas.criar({ titulo: "Antes" });
+    await caller().tarefas.concluir({ id: tarefa.id, concluida: true });
+    const editada = await caller().tarefas.atualizar({ id: tarefa.id, titulo: "Depois" });
+    expect(editada.concluida).toBe(true);
+  });
+
+  it("devolve NOT_FOUND para tarefa inexistente", async () => {
+    expect(await codigoDoErro(caller().tarefas.concluir({ id: "nao-existe", concluida: true }))).toBe("NOT_FOUND");
+  });
+});
+
 describe("remover", () => {
   it("remove a tarefa e depois devolve NOT_FOUND", async () => {
     const tarefa = await caller().tarefas.criar({ titulo: "Remover" });

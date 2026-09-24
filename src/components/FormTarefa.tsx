@@ -105,11 +105,11 @@ export function FormTarefa({ tarefa }: Props) {
   }
 
   return (
-    <form onSubmit={enviar} noValidate className="space-y-5" aria-busy={enviando}>
-      <h1 className="text-xl font-semibold">{editando ? "Editar tarefa" : "Nova tarefa"}</h1>
+    <form onSubmit={enviar} noValidate className="cartao space-y-5 p-6 sm:p-8" aria-busy={enviando}>
+      <h1 className="titulo-pagina">{editando ? "Editar tarefa" : "Nova tarefa"}</h1>
 
       {erroGeral && (
-        <p role="alert" className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900 dark:border-red-800 dark:bg-red-950 dark:text-red-100">
+        <p role="alert" className="rounded border-l-4 border-erro bg-erro-fundo px-4 py-3 text-sm text-erro dark:border-erro-claro dark:bg-marinho-superficie dark:text-erro-claro">
           {erroGeral}
         </p>
       )}
@@ -156,11 +156,11 @@ export function FormTarefa({ tarefa }: Props) {
         <button
           type="submit"
           disabled={enviando}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+          className="botao-primario"
         >
           {enviando ? "Salvando..." : editando ? "Salvar alterações" : "Criar tarefa"}
         </button>
-        <Link href="/" className="rounded-md px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
+        <Link href="/" className="botao-secundario">
           Cancelar
         </Link>
       </div>
@@ -194,9 +194,9 @@ function Campo({ id, rotulo, obrigatorio, erro, contador, children }: PropsCampo
       <div className="mb-1 flex items-baseline justify-between">
         <label htmlFor={id} className="text-sm font-medium">
           {rotulo}
-          {obrigatorio && <span className="text-red-600"> *</span>}
+          {obrigatorio && <span className="text-magenta-forte dark:text-magenta-claro"> *</span>}
         </label>
-        <span className="text-xs text-slate-500">{contador}</span>
+        <span className="texto-suave text-xs">{contador}</span>
       </div>
       {children({
         id,
@@ -204,12 +204,10 @@ function Campo({ id, rotulo, obrigatorio, erro, contador, children }: PropsCampo
         required: obrigatorio,
         "aria-invalid": Boolean(erro),
         "aria-describedby": erro ? idErro : undefined,
-        className: `block w-full rounded-md border bg-white px-3 py-2 shadow-sm focus:outline-2 focus:outline-indigo-600 dark:bg-slate-900 ${
-          erro ? "border-red-500" : "border-slate-300 dark:border-slate-700"
-        }`,
+        className: "campo",
       })}
       {erro && (
-        <p id={idErro} className="mt-1 text-sm text-red-600 dark:text-red-400">
+        <p id={idErro} className="mt-1 text-sm text-erro dark:text-erro-claro">
           {erro}
         </p>
       )}

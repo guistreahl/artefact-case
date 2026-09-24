@@ -17,5 +17,5 @@ variable "repositorio_github" {
 
 variable "dominio" {
   type    = string
-  default = "tarefas.guistreahl.com.br"
+  default = "gerenciador.guistreahl.com.br"
 }
