@@ -9,15 +9,10 @@ import { getQueryClient, trpc } from "@/trpc/server";
 // tentar gerar a página uma vez só, no build.
 export const dynamic = "force-dynamic";
 
-const AVISOS = {
-  criada: "Tarefa criada.",
-  atualizada: "Tarefa atualizada.",
-} as const;
-
-type Props = { searchParams: Promise<{ aviso?: string; ajuda?: string }> };
+type Props = { searchParams: Promise<{ ajuda?: string }> };
 
 export default async function PaginaListagem({ searchParams }: Props) {
-  const { aviso, ajuda } = await searchParams;
+  const { ajuda } = await searchParams;
   const jaViuBoasVindas = (await cookies()).has(COOKIE_BOAS_VINDAS);
   const veioDoMenu = ajuda === "1";
 
@@ -32,14 +27,12 @@ export default async function PaginaListagem({ searchParams }: Props) {
     ),
   );
 
-  const mensagem = aviso && aviso in AVISOS ? AVISOS[aviso as keyof typeof AVISOS] : undefined;
-
   return (
     <>
       {(!jaViuBoasVindas || veioDoMenu) && <BoasVindas veioDoMenu={veioDoMenu} />}
       <h1 className="titulo-pagina mb-6">Suas tarefas</h1>
       <HydrationBoundary state={dehydrate(queryClient)}>
-        <ListaTarefas avisoInicial={mensagem} />
+        <ListaTarefas />
       </HydrationBoundary>
     </>
   );

@@ -8,7 +8,8 @@ const PASSOS = [
   { nome: "Conclua", texto: "Marque o círculo ao lado de uma tarefa. Clique de novo para reabrir." },
   { nome: "Crie", texto: "O botão Nova tarefa, no alto, abre o formulário. Título é obrigatório." },
   { nome: "Edite", texto: "Cada tarefa tem um botão Editar, que abre o formulário preenchido." },
-  { nome: "Exclua", texto: "O botão Excluir remove na hora e confirma com um aviso." },
+  { nome: "Exclua", texto: "O botão Excluir pede confirmação antes de remover." },
+  { nome: "Reordene", texto: "Arraste pelo puxador de seis pontos, à esquerda de cada tarefa." },
   { nome: "Role", texto: "A lista carrega de 10 em 10 conforme você se aproxima do fim." },
 ];
 
@@ -43,7 +44,7 @@ export function BoasVindas({ veioDoMenu }: Props) {
         </h2>
         <p className="mt-2 max-w-xl text-sm text-white/75">
           Esta lista é separada para cada visitante e fica guardada na memória do servidor. Ela
-          começa com tarefas de exemplo; as cinco primeiras são um roteiro rápido.
+          começa com tarefas de exemplo; as seis primeiras são um roteiro rápido.
         </p>
 
         <ol className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

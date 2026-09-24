@@ -36,7 +36,7 @@ Publicado em `https://gerenciador.guistreahl.com.br`.
 |---|---|---|
 | C1 | Next.js 15.5 (App Router) e tRPC 11 com TanStack Query | `src/trpc/`, `src/app/api/trpc/` |
 | C2 | `id` com `crypto.randomUUID()` e `dataCriacao` definidos pelo servidor | `src/server/tarefas/store.ts` |
-| C3 | Procedimentos `listar`, `obter`, `criar`, `atualizar` e `remover` (mais `concluir`, seção 2.2) | `src/server/tarefas/router.ts` |
+| C3 | Procedimentos `listar`, `obter`, `criar`, `atualizar` e `remover` (mais `concluir` e `mover`, seção 2.2) | `src/server/tarefas/router.ts` |
 | C4 | `Map` em memória no processo do servidor | `src/server/tarefas/store.ts` |
 | C5 | O mesmo schema Zod valida no formulário e no servidor | `src/server/tarefas/schema.ts` |
 | C6 | `NOT_FOUND` para `id` inexistente, `BAD_REQUEST` com o erro de cada campo | `src/server/tarefas/router.ts`, `src/server/trpc.ts` |
@@ -44,7 +44,7 @@ Publicado em `https://gerenciador.guistreahl.com.br`.
 | C8 | Confirmação num diálogo, depois exclusão otimista: a tarefa sai na hora e volta com aviso se o servidor recusar | `src/components/ConfirmarExclusao.tsx`, `src/components/ListaTarefas.tsx` |
 | C9 | Um único `FormTarefa` para criar e editar, com `useState` | `src/components/FormTarefa.tsx` |
 | C10 | Envio bloqueado com título vazio, erro mostrado embaixo do campo | `src/components/FormTarefa.tsx` |
-| C11 | Botões desabilitados durante o envio, avisos de sucesso e erro, estados de lista vazia e de falha | `src/components/` |
+| C11 | Botões desabilitados durante o envio, avisos flutuantes de sucesso e erro, estados de lista vazia e de falha | `src/components/Avisos.tsx`, `src/components/` |
 | C12 | `useInfiniteQuery` com paginação por cursor e `IntersectionObserver` | `src/components/ListaTarefas.tsx` |
 | C13 | Comentários nos pontos de decisão, README e este documento | todo o repositório |
 | C14 | Tarefas de exemplo fictícias, nenhuma chave ou segredo no repositório | seção 6.3 |
@@ -55,10 +55,13 @@ Publicado em `https://gerenciador.guistreahl.com.br`.
 |---|---|
 | Campos `concluida` e `dataConclusao`, e o procedimento `concluir` | É a ação mais comum numa lista de tarefas, e o horário registra quando ela aconteceu. O case pede "pelo menos" os quatro campos, então o modelo pode crescer |
 | Confirmação antes de excluir | Excluir não tem volta. Um clique errado no botão não pode apagar uma tarefa |
+| Ordem manual por arraste (`posicao` e `mover`) | Numa lista de tarefas, a ordem é a prioridade. Funciona com mouse, toque e teclado (seção 3.6) |
+| Avisos flutuantes | Ficam fixos no alto da janela. Um aviso no topo da lista não seria visto por quem está com a página rolada |
+| Volta ao mesmo ponto depois de editar | Quem edita uma tarefa lá embaixo não perde o lugar na lista |
 | Uma lista por visitante | O endereço é público. Com uma lista única, cada pessoa veria o que as anteriores escreveram (seção 3.3) |
-| Painel de boas-vindas e tarefas-roteiro | Quem abre a aplicação pela primeira vez aprende a usar sem ler documentação (seção 3.7) |
+| Painel de boas-vindas e tarefas-roteiro | Quem abre a aplicação pela primeira vez aprende a usar sem ler documentação (seção 3.8) |
 | Tarefas de exemplo em toda sessão nova | A lista nunca abre vazia e a rolagem infinita tem o que carregar |
-| Design system próprio | Paleta e tipografia inspiradas na identidade da Artefact, em tokens (seção 3.8) |
+| Design system próprio | Paleta e tipografia inspiradas na identidade da Artefact, em tokens (seção 3.9) |
 | Testes de unidade e de navegador | Vitest no router, Playwright no fluxo completo de criar, editar, excluir e rolar |
 | Publicação no Cloud Run | A aplicação no ar, com deploy automático a cada push na `main` |
 | Infraestrutura em Terraform | Todo recurso do Google Cloud descrito no repositório |
@@ -112,7 +115,7 @@ src/
   components/
     ListaTarefas.tsx
     FormTarefa.tsx
-    Aviso.tsx
+    Avisos.tsx             avisos flutuantes, disponíveis para qualquer componente
     BoasVindas.tsx         painel da primeira visita
     ConfirmarExclusao.tsx  diálogo "Você deseja excluir esta tarefa?"
   middleware.ts            emite o cookie de sessão na primeira visita
@@ -152,6 +155,7 @@ type Tarefa = {
   concluida: boolean;  // toda tarefa nasce pendente
   dataConclusao?: string; // ISO 8601, gravado ao concluir e apagado ao reabrir
   dataCriacao: string; // ISO 8601, definido pelo servidor
+  posicao: number;     // ordem manual: a menor aparece primeiro
 };
 ```
 
@@ -162,6 +166,7 @@ type Tarefa = {
 | `tarefas.criar` | mutation | `{ titulo, descricao? }` | `BAD_REQUEST`, `TOO_MANY_REQUESTS` |
 | `tarefas.atualizar` | mutation | `{ id, titulo, descricao? }` | `BAD_REQUEST`, `NOT_FOUND` |
 | `tarefas.concluir` | mutation | `{ id, concluida }` | `NOT_FOUND` |
+| `tarefas.mover` | mutation | `{ id, depoisDe }` | `NOT_FOUND` |
 | `tarefas.remover` | mutation | `{ id }` | `NOT_FOUND` |
 
 `concluir` registra `dataConclusao` com o relógio do servidor. Marcar de novo
@@ -169,8 +174,8 @@ uma tarefa já concluída mantém o horário original, e reabrir apaga o horári
 Na tela, a conclusão é otimista com o horário do navegador, trocado pelo do
 servidor quando a resposta chega.
 
-`listar` devolve `{ itens, proximoCursor }`, da tarefa mais nova para a mais
-antiga. O cursor é o `id` da última tarefa entregue. Com offset, excluir uma
+`listar` devolve `{ itens, proximoCursor }` na ordem de `posicao`. O cursor
+é a posição e o `id` da última tarefa entregue. Com offset, excluir uma
 tarefa no meio da rolagem deslocaria a lista e a próxima página pularia um
 item. Com cursor, isso não acontece.
 
@@ -201,7 +206,29 @@ navegador ── HydrationBoundary ──► useInfiniteQuery começa do cache, 
 IntersectionObserver ──► GET /api/trpc/tarefas.listar?cursor=...
 ```
 
-### 3.6 Confirmação de exclusão
+### 3.6 Ordem manual
+
+Cada tarefa tem uma `posicao` numérica, e a lista é ordenada por ela. Tarefa
+nova recebe uma posição antes da primeira e entra no topo.
+
+`mover({ id, depoisDe })` coloca a tarefa logo abaixo de `depoisDe`, ou no
+topo com `null`. A posição nova é o ponto médio entre as duas vizinhas, então
+só a tarefa movida muda. Quando as vizinhas ficam próximas demais para caber
+um número entre elas (menos de 10⁻⁹), a lista inteira é renumerada.
+
+Na tela, o arraste usa o dnd-kit:
+
+1. **Puxador** de seis pontos à esquerda de cada tarefa. Só ele inicia o
+   arraste, para o checkbox, os links e a rolagem no celular continuarem
+   funcionando normalmente.
+2. **Mouse e toque** começam depois de 5px de movimento, para um clique no
+   puxador não virar arraste.
+3. **Teclado:** foco no puxador, espaço pega, setas movem, espaço solta, Esc
+   cancela. Os anúncios para leitor de tela estão em português.
+4. **Otimista:** a tarefa fica onde foi solta, e a lista é recarregada depois
+   da resposta do servidor. Se ele recusar, a ordem anterior volta, com aviso.
+
+### 3.7 Confirmação de exclusão
 
 O botão Excluir abre um diálogo: "Você deseja excluir esta tarefa?", com o
 título da tarefa e os botões Cancelar e Excluir. É o `<dialog>` nativo, aberto
@@ -210,20 +237,20 @@ o resto da página inerte e devolve o foco ao botão de origem. O foco começa
 em Cancelar, a opção que não destrói nada. Só a confirmação dispara o
 procedimento `remover`.
 
-### 3.7 Primeira visita
+### 3.8 Primeira visita
 
 Na primeira visita, a listagem abre com um painel de boas-vindas que explica
-em cinco passos como concluir, criar, editar, excluir e rolar. Ao fechar, um
+em seis passos como concluir, criar, editar, excluir, reordenar e rolar. Ao fechar, um
 cookie `boas-vindas` registra que ele foi visto. Quem decide mostrar o painel
 é o servidor, lendo esse cookie no SSR, então a página já chega com ou sem
 ele e nada pisca na tela. O link "Como usar" do cabeçalho abre a listagem com
 `?ajuda=1`, e o painel volta.
 
-As cinco primeiras tarefas de exemplo repetem o roteiro na prática: cada uma
+As seis primeiras tarefas de exemplo repetem o roteiro na prática: cada uma
 pede uma ação ("Marque esta tarefa como concluída", "Edite esta tarefa") e
 diz o que observar.
 
-### 3.8 Design system
+### 3.9 Design system
 
 Tokens do Tailwind 4, declarados em `@theme` no `src/app/globals.css`.
 Nenhum componente usa cor fora deles.
@@ -265,7 +292,7 @@ nome da empresa como marca do produto.
 ### 4.1 Visão geral
 
 ```
-push na main (guistreahl/case-artefact)
+push na main (guistreahl/artefact-case)
    │
    ▼
 GitHub Actions ──OIDC──► Workload Identity Federation
@@ -367,7 +394,7 @@ vazar.
 ### 6.2 Condição do Workload Identity
 
 ```
-assertion.repository == 'guistreahl/case-artefact' &&
+assertion.repository == 'guistreahl/artefact-case' &&
 assertion.ref == 'refs/heads/main'
 ```
 

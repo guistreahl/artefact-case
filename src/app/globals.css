@@ -38,6 +38,14 @@
   --color-erro: #c4231a;
   --color-erro-fundo: #fdeceb;
   --color-erro-claro: #ff7b72;
+
+  --animate-surgir: surgir 180ms ease-out;
+  @keyframes surgir {
+    from {
+      opacity: 0;
+      transform: translateY(-0.75rem);
+    }
+  }
 }
 
 @layer base {
