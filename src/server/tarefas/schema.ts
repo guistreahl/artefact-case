@@ -30,6 +30,8 @@ export const dadosTarefaSchema = z.object({
 
 export const atualizarTarefaSchema = dadosTarefaSchema.extend({ id: idSchema });
 
+export const concluirTarefaSchema = z.object({ id: idSchema, concluida: z.boolean() });
+
 export const listarTarefasSchema = z.object({
   // null na primeira página: é o valor que o useInfiniteQuery envia.
   cursor: z.string().max(200).nullish(),
@@ -42,6 +44,8 @@ export type Tarefa = {
   id: string;
   titulo: string;
   descricao?: string;
+  /** Campo além do mínimo do case. Toda tarefa nasce pendente. */
+  concluida: boolean;
   /** ISO 8601, definido pelo servidor na criação. */
   dataCriacao: string;
 };

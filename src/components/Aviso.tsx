@@ -6,8 +6,8 @@ export type DadosAviso = { tipo: "sucesso" | "erro"; mensagem: string };
 
 const ESTILOS = {
   sucesso:
-    "border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-100",
-  erro: "border-red-300 bg-red-50 text-red-900 dark:border-red-800 dark:bg-red-950 dark:text-red-100",
+    "border-turquesa-escuro bg-turquesa-fundo text-marinho dark:border-turquesa dark:bg-marinho-superficie dark:text-white",
+  erro: "border-erro bg-erro-fundo text-erro dark:border-erro-claro dark:bg-marinho-superficie dark:text-erro-claro",
 };
 
 type Props = { aviso: DadosAviso | null; aoFechar: () => void };
@@ -30,7 +30,7 @@ export function Aviso({ aviso, aoFechar }: Props) {
       {aviso && (
         <div
           role={aviso.tipo === "erro" ? "alert" : "status"}
-          className={`mb-4 flex items-start justify-between gap-4 rounded-lg border px-4 py-3 text-sm ${ESTILOS[aviso.tipo]}`}
+          className={`mb-4 flex items-start justify-between gap-4 rounded border-l-4 px-4 py-3 text-sm ${ESTILOS[aviso.tipo]}`}
         >
           <span>{aviso.mensagem}</span>
           <button type="button" onClick={aoFechar} aria-label="Fechar aviso" className="font-medium opacity-70 hover:opacity-100">

@@ -4,3 +4,6 @@
  * ignoraria a página que veio do servidor e buscaria tudo de novo.
  */
 export const TAMANHO_PAGINA = 10;
+
+/** Marca que o painel de boas-vindas já foi fechado neste navegador. */
+export const COOKIE_BOAS_VINDAS = "boas-vindas";

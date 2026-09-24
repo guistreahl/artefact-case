@@ -1,11 +1,28 @@
-# Tarefas
+<h1 align="center">Gerenciador de tarefas</h1>
 
-Gerenciador de tarefas em Next.js 15 com tRPC. Criar, listar, editar e
-excluir, com a lista guardada em memória no servidor.
+<p align="center">
+  Criar, listar, editar, concluir e excluir tarefas.<br>
+  Next.js 15 com tRPC, listagem renderizada no servidor e rolagem infinita.
+</p>
 
-**No ar:** <https://tarefas.guistreahl.com.br>
+<p align="center">
+  <a href="https://gerenciador.guistreahl.com.br">
+    <img src="https://img.shields.io/badge/Abrir_a_aplica%C3%A7%C3%A3o-E0005C?style=for-the-badge" alt="Abrir a aplicação" height="36">
+  </a>
+</p>
 
-![CI](https://github.com/guistreahl/case-artefact/actions/workflows/ci.yml/badge.svg)
+<p align="center">
+  <a href="https://github.com/guistreahl/case-artefact/actions/workflows/ci.yml"><img src="https://github.com/guistreahl/case-artefact/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/guistreahl/case-artefact/actions/workflows/deploy.yml"><img src="https://github.com/guistreahl/case-artefact/actions/workflows/deploy.yml/badge.svg" alt="Deploy"></a>
+</p>
+
+<p align="center">
+  <img src="docs/img/demo.gif" width="800" alt="Demonstração: o painel de boas-vindas é fechado, uma tarefa é marcada como concluída, uma tarefa nova é criada e a lista é rolada até carregar mais itens.">
+</p>
+
+Na primeira visita, um painel explica como usar, e as cinco primeiras tarefas
+da lista são um roteiro para experimentar cada função. O painel volta pelo
+link **Como usar**, no topo.
 
 ## Rodar localmente
 
@@ -61,11 +78,13 @@ navegador ──► Next.js (App Router)
 4. **Erros com significado.** `NOT_FOUND` para tarefa inexistente,
    `BAD_REQUEST` com a mensagem de cada campo. O formulário mostra o erro
    embaixo do campo; a lista mostra avisos de sucesso e de erro.
-5. **Exclusão otimista.** A tarefa sai da tela na hora e volta, com aviso, se
-   o servidor recusar.
+5. **Exclusão e conclusão otimistas.** A tela muda na hora e volta ao estado
+   anterior, com aviso, se o servidor recusar.
 6. **Uma lista por visitante.** Um cookie anônimo separa as listas, para que
    quem abre o endereço público veja só o que criou. Toda lista nova começa
    com 30 tarefas fictícias de exemplo.
+7. **Identidade visual** inspirada na da Artefact: marinho, magenta,
+   turquesa e Roboto, definidos como tokens em `src/app/globals.css`.
 
 Como tudo fica em memória, a lista recomeça quando o servidor reinicia. No
 Cloud Run, isso acontece depois de alguns minutos sem acesso.

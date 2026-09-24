@@ -37,19 +37,23 @@ export function ListaTarefas({ avisoInicial }: Props) {
   );
   const chaveLista = trpc.tarefas.listar.infiniteQueryKey(entrada);
 
-  // Exclusão otimista: a tarefa sai da tela antes da resposta do servidor. Se
-  // o servidor recusar, a lista volta ao estado anterior.
+  // Aplica uma mudança a uma tarefa em todas as páginas já carregadas.
+  const alterarNoCache = useCallback(
+    (alterar: (itens: Tarefa[]) => Tarefa[]) =>
+      queryClient.setQueryData(chaveLista, (dados) =>
+        dados && { ...dados, pages: dados.pages.map((p) => ({ ...p, itens: alterar(p.itens) })) },
+      ),
+    [queryClient, chaveLista],
+  );
+
+  // Exclusão e conclusão são otimistas: a tela muda antes da resposta do
+  // servidor. Se o servidor recusar, a lista volta ao estado anterior.
   const remover = useMutation(
     trpc.tarefas.remover.mutationOptions({
       onMutate: async ({ id }) => {
         await queryClient.cancelQueries({ queryKey: chaveLista });
         const anterior = queryClient.getQueryData(chaveLista);
-        queryClient.setQueryData(chaveLista, (dados) =>
-          dados && {
-            ...dados,
-            pages: dados.pages.map((p) => ({ ...p, itens: p.itens.filter((t) => t.id !== id) })),
-          },
-        );
+        alterarNoCache((itens) => itens.filter((t) => t.id !== id));
         return { anterior };
       },
       onError: (erro, _variaveis, resultado) => {
@@ -58,6 +62,22 @@ export function ListaTarefas({ avisoInicial }: Props) {
       },
       onSuccess: () => setAviso({ tipo: "sucesso", mensagem: "Tarefa excluída." }),
       onSettled: () => queryClient.invalidateQueries({ queryKey: trpc.tarefas.listar.pathKey() }),
+    }),
+  );
+
+  const concluir = useMutation(
+    trpc.tarefas.concluir.mutationOptions({
+      onMutate: async ({ id, concluida }) => {
+        await queryClient.cancelQueries({ queryKey: chaveLista });
+        const anterior = queryClient.getQueryData(chaveLista);
+        alterarNoCache((itens) => itens.map((t) => (t.id === id ? { ...t, concluida } : t)));
+        return { anterior };
+      },
+      onError: (erro, _variaveis, resultado) => {
+        if (resultado?.anterior) queryClient.setQueryData(chaveLista, resultado.anterior);
+        setAviso({ tipo: "erro", mensagem: `Não foi possível atualizar: ${erro.message}` });
+      },
+      // Sem aviso de sucesso: o próprio círculo marcado já é a confirmação.
     }),
   );
 
@@ -81,10 +101,7 @@ export function ListaTarefas({ avisoInicial }: Props) {
   const tarefas = lista.data?.pages.flatMap((p) => p.itens) ?? [];
 
   return (
-    <section aria-labelledby="titulo-lista">
-      <h1 id="titulo-lista" className="sr-only">
-        Lista de tarefas
-      </h1>
+    <section aria-label="Lista de tarefas">
       <Aviso aviso={aviso} aoFechar={fecharAviso} />
 
       {lista.isError && !lista.data ? (
@@ -94,18 +111,23 @@ export function ListaTarefas({ avisoInicial }: Props) {
       ) : (
         <ul className="space-y-3">
           {tarefas.map((tarefa) => (
-            <ItemTarefa key={tarefa.id} tarefa={tarefa} aoExcluir={() => remover.mutate({ id: tarefa.id })} />
+            <ItemTarefa
+              key={tarefa.id}
+              tarefa={tarefa}
+              aoConcluir={(concluida) => concluir.mutate({ id: tarefa.id, concluida })}
+              aoExcluir={() => remover.mutate({ id: tarefa.id })}
+            />
           ))}
         </ul>
       )}
 
       <div ref={sentinela} aria-hidden="true" />
-      <p className="py-6 text-center text-sm text-slate-500 dark:text-slate-400" aria-live="polite">
+      <p className="texto-suave py-6 text-center text-sm" aria-live="polite">
         {isFetchingNextPage
           ? "Carregando mais tarefas..."
           : lista.isFetchNextPageError
             ? (
-                <button type="button" onClick={() => void fetchNextPage()} className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+                <button type="button" onClick={() => void fetchNextPage()} className="link-acao">
                   Falha ao carregar mais. Tentar de novo
                 </button>
               )
@@ -117,41 +139,79 @@ export function ListaTarefas({ avisoInicial }: Props) {
   );
 }
 
-function ItemTarefa({ tarefa, aoExcluir }: { tarefa: Tarefa; aoExcluir: () => void }) {
+type PropsItem = {
+  tarefa: Tarefa;
+  aoConcluir: (concluida: boolean) => void;
+  aoExcluir: () => void;
+};
+
+function ItemTarefa({ tarefa, aoConcluir, aoExcluir }: PropsItem) {
+  const idTitulo = `tarefa-${tarefa.id}`;
+
+  // O cache do TanStack Query notifica os componentes no tick seguinte. Sem um
+  // estado local, o React devolveria o checkbox ao valor antigo logo após o
+  // clique e só depois o marcaria, e a caixa piscaria. Quando o dado muda por
+  // fora (resposta do servidor, erro que desfaz a mudança), o estado local
+  // acompanha.
+  const [concluida, setConcluida] = useState(tarefa.concluida);
+  const [ultimaDoServidor, setUltimaDoServidor] = useState(tarefa.concluida);
+  if (tarefa.concluida !== ultimaDoServidor) {
+    setUltimaDoServidor(tarefa.concluida);
+    setConcluida(tarefa.concluida);
+  }
+
+  function alternar(marcada: boolean) {
+    setConcluida(marcada);
+    aoConcluir(marcada);
+  }
   return (
     <li
       data-testid="tarefa"
-      className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+      data-concluida={concluida}
+      className={`cartao flex items-start gap-4 border-l-4 p-4 ${
+        concluida ? "border-l-turquesa" : "border-l-magenta"
+      }`}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h2 className="font-medium break-words">{tarefa.titulo}</h2>
-          {tarefa.descricao && (
-            <p className="mt-1 text-sm whitespace-pre-line break-words text-slate-600 dark:text-slate-400">
-              {tarefa.descricao}
-            </p>
-          )}
-          <p className="mt-2 text-xs text-slate-500">
-            Criada em <time dateTime={tarefa.dataCriacao}>{formatarData(tarefa.dataCriacao)}</time>
-          </p>
-        </div>
-        <div className="flex shrink-0 gap-2 text-sm">
-          <Link
-            href={`/tarefas/${tarefa.id}/editar`}
-            aria-label={`Editar ${tarefa.titulo}`}
-            className="rounded-md px-2 py-1 font-medium text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-slate-800"
-          >
-            Editar
-          </Link>
-          <button
-            type="button"
-            onClick={aoExcluir}
-            aria-label={`Excluir ${tarefa.titulo}`}
-            className="rounded-md px-2 py-1 font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-slate-800"
-          >
-            Excluir
-          </button>
-        </div>
+      <label className="relative mt-0.5 flex size-6 shrink-0 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={concluida}
+          onChange={(e) => alternar(e.target.checked)}
+          aria-labelledby={idTitulo}
+          className="peer size-6 cursor-pointer appearance-none rounded-full border-2 border-grafite/50 transition-colors checked:border-turquesa checked:bg-turquesa hover:border-turquesa-escuro dark:border-white/40"
+        />
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 hidden size-6 p-1 text-marinho peer-checked:block"
+        >
+          <path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </label>
+
+      <div className="min-w-0 flex-1">
+        <h2
+          id={idTitulo}
+          className={`font-medium break-words ${concluida ? "texto-suave line-through" : ""}`}
+        >
+          {tarefa.titulo}
+        </h2>
+        {tarefa.descricao && (
+          <p className="texto-suave mt-1 text-sm whitespace-pre-line break-words">{tarefa.descricao}</p>
+        )}
+        <p className="texto-suave mt-2 text-xs">
+          Criada em <time dateTime={tarefa.dataCriacao}>{formatarData(tarefa.dataCriacao)}</time>
+          {concluida && " · Concluída"}
+        </p>
+      </div>
+
+      <div className="flex shrink-0 flex-col gap-1 sm:flex-row">
+        <Link href={`/tarefas/${tarefa.id}/editar`} aria-label={`Editar ${tarefa.titulo}`} className="link-acao text-center">
+          Editar
+        </Link>
+        <button type="button" onClick={aoExcluir} aria-label={`Excluir ${tarefa.titulo}`} className="link-acao">
+          Excluir
+        </button>
       </div>
     </li>
   );
@@ -159,9 +219,9 @@ function ItemTarefa({ tarefa, aoExcluir }: { tarefa: Tarefa; aoExcluir: () => vo
 
 function Vazio() {
   return (
-    <div className="rounded-lg border border-dashed border-slate-300 py-12 text-center dark:border-slate-700">
-      <p className="text-slate-600 dark:text-slate-400">Nenhuma tarefa por aqui.</p>
-      <Link href="/tarefas/nova" className="mt-3 inline-block font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+    <div className="rounded border border-dashed border-nevoa-borda py-12 text-center dark:border-marinho-borda">
+      <p className="texto-suave">Nenhuma tarefa por aqui.</p>
+      <Link href="/tarefas/nova" className="botao-primario mt-4">
         Criar a primeira
       </Link>
     </div>
@@ -170,9 +230,9 @@ function Vazio() {
 
 function Falha({ mensagem, aoTentarDeNovo }: { mensagem: string; aoTentarDeNovo: () => void }) {
   return (
-    <div role="alert" className="rounded-lg border border-red-300 bg-red-50 p-6 text-center dark:border-red-800 dark:bg-red-950">
-      <p className="text-red-900 dark:text-red-100">Não foi possível carregar as tarefas: {mensagem}</p>
-      <button type="button" onClick={aoTentarDeNovo} className="mt-3 font-medium text-red-700 hover:underline dark:text-red-300">
+    <div role="alert" className="rounded border-l-4 border-erro bg-erro-fundo p-6 text-center text-erro dark:bg-marinho-superficie dark:text-erro-claro">
+      <p>Não foi possível carregar as tarefas: {mensagem}</p>
+      <button type="button" onClick={aoTentarDeNovo} className="botao-secundario mt-3">
         Tentar de novo
       </button>
     </div>

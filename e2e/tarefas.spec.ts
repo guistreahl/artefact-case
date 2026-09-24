@@ -62,3 +62,36 @@ test("editar uma tarefa inexistente responde 404", async ({ page }) => {
   expect(resposta?.status()).toBe(404);
   await expect(page.getByText("Esta tarefa não existe ou já foi excluída.")).toBeVisible();
 });
+
+test("marca e desmarca uma tarefa como concluída, e o estado fica no servidor", async ({ page }) => {
+  await page.goto("/");
+  const caixa = page.getByRole("checkbox", { name: "Marque esta tarefa como concluída" });
+  await expect(caixa).not.toBeChecked();
+
+  await caixa.check();
+  await expect(caixa).toBeChecked();
+  await page.reload();
+  await expect(caixa).toBeChecked();
+
+  await caixa.uncheck();
+  await page.reload();
+  await expect(caixa).not.toBeChecked();
+});
+
+test("o painel de boas-vindas aparece na primeira visita e volta pelo menu", async ({ page }) => {
+  const painel = page.getByRole("region", { name: /Suas tarefas, só suas/ });
+
+  await page.goto("/");
+  await expect(painel).toBeVisible();
+
+  await page.getByRole("button", { name: "Entendi, começar" }).click();
+  await expect(painel).toHaveCount(0);
+  await page.reload();
+  await expect(painel).toHaveCount(0);
+
+  await page.getByRole("link", { name: "Como usar" }).click();
+  await expect(painel).toBeVisible();
+  await page.getByRole("button", { name: "Entendi, começar" }).click();
+  await expect(painel).toHaveCount(0);
+  await expect(page).toHaveURL(/\/$/);
+});

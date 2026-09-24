@@ -1,6 +1,8 @@
+import { cookies } from "next/headers";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
+import { BoasVindas } from "@/components/BoasVindas";
 import { ListaTarefas } from "@/components/ListaTarefas";
-import { TAMANHO_PAGINA } from "@/lib/constantes";
+import { COOKIE_BOAS_VINDAS, TAMANHO_PAGINA } from "@/lib/constantes";
 import { getQueryClient, trpc } from "@/trpc/server";
 
 // A lista depende do cookie de cada visitante. Sem esta linha, o Next poderia
@@ -12,10 +14,12 @@ const AVISOS = {
   atualizada: "Tarefa atualizada.",
 } as const;
 
-type Props = { searchParams: Promise<{ aviso?: string }> };
+type Props = { searchParams: Promise<{ aviso?: string; ajuda?: string }> };
 
 export default async function PaginaListagem({ searchParams }: Props) {
-  const { aviso } = await searchParams;
+  const { aviso, ajuda } = await searchParams;
+  const jaViuBoasVindas = (await cookies()).has(COOKIE_BOAS_VINDAS);
+  const veioDoMenu = ajuda === "1";
 
   // SSR: a primeira página é buscada aqui, no servidor, e vai no HTML. O
   // HydrationBoundary entrega o mesmo dado ao cache do cliente, que continua
@@ -31,8 +35,12 @@ export default async function PaginaListagem({ searchParams }: Props) {
   const mensagem = aviso && aviso in AVISOS ? AVISOS[aviso as keyof typeof AVISOS] : undefined;
 
   return (
-    <HydrationBoundary state={dehydrate(queryClient)}>
-      <ListaTarefas avisoInicial={mensagem} />
-    </HydrationBoundary>
+    <>
+      {(!jaViuBoasVindas || veioDoMenu) && <BoasVindas veioDoMenu={veioDoMenu} />}
+      <h1 className="titulo-pagina mb-6">Suas tarefas</h1>
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <ListaTarefas avisoInicial={mensagem} />
+      </HydrationBoundary>
+    </>
   );
 }
