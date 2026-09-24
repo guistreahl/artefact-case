@@ -135,6 +135,18 @@ Each addition has a reason, detailed in the [SDD](docs/SDD.md):
 Field names follow the case (`titulo`, `descricao`, `dataCriacao`); the rest
 of the code is in English.
 
+## Next steps
+
+This is the scope delivered for the case. The natural next steps:
+
+1. **Export to a calendar file.** A button to download the tasks as an
+   `.ics` file (iCalendar), which Google Calendar, Outlook and Apple Calendar
+   import. It needs a due date on the task, so each task can become an event.
+2. **Google Calendar integration.** Sign in with Google (OAuth) and sync tasks
+   that have a due date with the user's calendar through the Google Calendar
+   API, keeping both sides up to date. Besides the due date, this needs user
+   accounts and a database in place of the in-memory list.
+
 ## Run locally
 
 Requires Node.js 22 or newer.
