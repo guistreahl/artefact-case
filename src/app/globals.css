@@ -1,6 +1,13 @@
 @import "tailwindcss";
 
 /*
+ * Light theme only, as in the brand's slides. Tailwind's dark variant would
+ * follow the device's colour scheme; here it is tied to a "dark" class that
+ * the app never sets, so the dark: styles stay in the code but never apply.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
  * Design system
  *
  * Palette and typography inspired by Artefact's visual identity (navy,
@@ -50,7 +57,7 @@
 
 @layer base {
   :root {
-    color-scheme: light dark;
+    color-scheme: light;
   }
 
   body {
@@ -83,6 +90,14 @@
 
   .btn-secondary {
     @apply inline-flex items-center justify-center rounded px-4 py-2 text-sm font-medium text-navy transition-colors hover:bg-mist-border/60 dark:text-white dark:hover:bg-navy-surface;
+  }
+
+  /*
+   * Edit: teal background with navy text (8.4:1). Teal as a text colour on
+   * white would be 1.9:1, unreadable, so the colour goes to the background.
+   */
+  .action-edit {
+    @apply rounded bg-teal px-2.5 py-1 text-sm font-medium text-navy transition-colors hover:bg-teal-dark;
   }
 
   .action-link {

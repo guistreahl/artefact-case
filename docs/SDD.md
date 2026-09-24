@@ -288,12 +288,12 @@ component uses a colour outside them.
 | Token | Value | Use |
 |---|---|---|
 | `navy` | `#002244` | Header, main text, welcome panel |
-| `navy-deep` | `#00162e` | Background in dark mode |
-| `navy-surface` | `#0a2e55` | Cards in dark mode |
+| `navy-deep` | `#00162e` | Background in dark mode (off) |
+| `navy-surface` | `#0a2e55` | Cards in dark mode (off) |
 | `magenta` | `#ff0066` | Full stop of titles, border of pending tasks |
 | `magenta-strong` | `#e0005c` | Buttons and links |
-| `magenta-light` | `#ff5c9d` | Links in dark mode |
-| `teal` | `#65cccc` | Completed tasks, panel numbers |
+| `magenta-light` | `#ff5c9d` | Links in dark mode (off) |
+| `teal` | `#65cccc` | Completed tasks, panel numbers, Edit button |
 | `teal-dark` | `#2ab6bf` | Focus outline, success notice border |
 | `mist` | `#f0f0f0` | Background in light mode |
 | `error` | `#c4231a` | Error messages, delete confirmation button |
@@ -315,7 +315,9 @@ CSS.
 **Brand:** the interface uses the palette and typography, but not the
 company's logo or name as the product's brand.
 
-**Dark mode** is automatic, following the system preference.
+**Light theme only**, as in the brand's slides, even on devices set to dark
+mode. The `dark:` styles stay in the code but never apply: the dark variant
+is tied to a `dark` class the app does not set.
 
 ---
 

@@ -287,7 +287,10 @@ function TaskItem({ task, onComplete, onDelete }: ItemProps) {
       style={{ transform: CSS.Transform.toString(transform && { ...transform, x: 0 }), transition }}
       data-testid="task"
       data-completed={completed}
-      className={`card relative flex items-start gap-3 border-l-4 p-4 ${
+      // Grid: handle, checkbox, content and actions. On phones the actions drop
+      // to a row under the content, so the text gets the full width; from the
+      // sm breakpoint on they sit in a fourth column on the right.
+      className={`card relative grid grid-cols-[auto_auto_minmax(0,1fr)] items-start gap-x-3 gap-y-3 border-l-4 p-4 sm:grid-cols-[auto_auto_minmax(0,1fr)_auto] ${
         completed ? "border-l-teal" : "border-l-magenta"
       } ${isDragging ? "z-10 shadow-xl ring-2 ring-magenta/60" : ""}`}
     >
@@ -353,11 +356,11 @@ function TaskItem({ task, onComplete, onDelete }: ItemProps) {
         </p>
       </div>
 
-      <div className="flex shrink-0 flex-col gap-1 sm:flex-row">
+      <div className="col-start-3 flex items-center gap-2 sm:col-start-4 sm:row-start-1">
         <Link
           href={`/tasks/${task.id}/edit?from=list`}
           aria-label={`Edit ${task.titulo}`}
-          className="action-link text-center"
+          className="action-edit text-center"
         >
           Edit
         </Link>

@@ -12,7 +12,7 @@ const SAMPLES: Sample[] = [
   },
   {
     titulo: "Drag this task above the other one",
-    descricao: "Hold the six-dot handle on the left. Edit and Delete are on the right.",
+    descricao: "Hold the six-dot handle on the left and drop the task above the first one.",
   },
 ];
 

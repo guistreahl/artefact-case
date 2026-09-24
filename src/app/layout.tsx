@@ -38,13 +38,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <ToastProvider>
             <header className="relative overflow-hidden bg-navy text-white">
               <div className="lambda -top-6 right-6 w-40 opacity-70 sm:right-24" aria-hidden="true" />
-              <div className="relative mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-4">
-                <Link href="/" className="text-xl font-light tracking-tight">
+              <div className="relative mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-4 sm:gap-4">
+                <Link href="/" className="text-lg font-light tracking-tight sm:text-xl">
                   gerenciador<span className="text-magenta">.</span>
                 </Link>
-                <nav className="flex items-center gap-2">
-                  <HelpLink className="rounded px-3 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white" />
-                  <Link href="/tasks/new" className="btn-primary">
+                {/* whitespace-nowrap keeps each label on one line down to 320px wide. */}
+                <nav className="flex items-center gap-1 whitespace-nowrap sm:gap-2">
+                  <HelpLink className="rounded px-2 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white sm:px-3" />
+                  <Link href="/tasks/new" className="btn-primary px-3 sm:px-4">
                     New task
                   </Link>
                 </nav>
