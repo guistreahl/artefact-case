@@ -130,6 +130,7 @@ src/
     TaskForm.tsx
     Toasts.tsx             floating notices, available to any component
     Welcome.tsx            first-visit panel
+    HelpLink.tsx           "How to use": reopens the panel in place on the list
     ConfirmDelete.tsx      "Do you want to delete this task?" dialog
   middleware.ts            origin check and session cookie on the first visit
 tests/
@@ -340,7 +341,7 @@ docker build ──► Artifact Registry   servicos/tarefas:<sha>
                  Cloud Run "tarefas" (us-central1)
                  runtime identity "tarefas-run"
                          ▲
-Cloudflare (proxy): robot challenge, per-IP limit, secret header
+Cloudflare (proxy): robot challenge, secret header
    ▲
 DNS: CNAME gerenciador ► ghs.googlehosted.com + Cloud Run domain mapping
 ```
@@ -452,10 +453,12 @@ edge inwards:
 | Setting | Effect |
 |---|---|
 | Custom rule: `http.host eq "gerenciador.guistreahl.com.br"` → *Managed Challenge* | Every visitor goes through Cloudflare's challenge, almost always without interaction. Robots stop here |
-| Bot Fight Mode | Blocks known robots before the rule above |
-| Rate limiting: `/api/trpc`, 100 requests in 10 s per IP → block | Contains bursts against the API |
 | Transform Rule: adds `x-origin-secret: <secret>` | Proves to the app that the request went through Cloudflare |
-| SSL *Full (strict)*, *Always Use HTTPS*, minimum TLS 1.2 | End-to-end encryption, with Google's certificate validated |
+| SSL *Full (strict)* | End-to-end encryption, with Google's certificate validated |
+
+Cloudflare's Bot Fight Mode and rate limiting rules are not enabled: the
+challenge already stops robots, and the app limits changes per IP on its own
+(layer 3).
 
 The proxy is only turned on after Google issues the domain certificate: with
 it on from the start, Google's validation does not reach Cloud Run.
