@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { criarRouter, procedimento } from "../trpc";
+import { criarRouter, procedimento, procedimentoDeAlteracao } from "../trpc";
 import {
   atualizarTarefaSchema,
   concluirTarefaSchema,
@@ -26,7 +26,7 @@ export const tarefasRouter = criarRouter({
     .input(porId)
     .query(({ ctx, input }) => ctx.repositorio.obter(ctx.sessao, input.id) ?? naoEncontrada(input.id)),
 
-  criar: procedimento.input(dadosTarefaSchema).mutation(({ ctx, input }) => {
+  criar: procedimentoDeAlteracao.input(dadosTarefaSchema).mutation(({ ctx, input }) => {
     try {
       return ctx.repositorio.criar(ctx.sessao, input);
     } catch (erro) {
@@ -37,7 +37,7 @@ export const tarefasRouter = criarRouter({
     }
   }),
 
-  atualizar: procedimento
+  atualizar: procedimentoDeAlteracao
     .input(atualizarTarefaSchema)
     .mutation(
       ({ ctx, input: { id, ...dados } }) =>
@@ -46,7 +46,7 @@ export const tarefasRouter = criarRouter({
 
   // Separado de `atualizar`: marcar na lista não reenvia título e descrição,
   // e não passa pela validação do formulário.
-  concluir: procedimento
+  concluir: procedimentoDeAlteracao
     .input(concluirTarefaSchema)
     .mutation(
       ({ ctx, input }) =>
@@ -56,14 +56,14 @@ export const tarefasRouter = criarRouter({
 
   // NOT_FOUND tanto para a tarefa movida quanto para a referência `depoisDe`,
   // que pode ter sido excluída em outra aba.
-  mover: procedimento
+  mover: procedimentoDeAlteracao
     .input(moverTarefaSchema)
     .mutation(
       ({ ctx, input }) =>
         ctx.repositorio.mover(ctx.sessao, input.id, input.depoisDe) ?? naoEncontrada(input.id),
     ),
 
-  remover: procedimento.input(porId).mutation(({ ctx, input }) => {
+  remover: procedimentoDeAlteracao.input(porId).mutation(({ ctx, input }) => {
     if (!ctx.repositorio.remover(ctx.sessao, input.id)) naoEncontrada(input.id);
     return { id: input.id };
   }),

@@ -33,7 +33,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <div className="lambda -top-6 right-6 w-40 opacity-70 sm:right-24" aria-hidden="true" />
               <div className="relative mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-4">
                 <Link href="/" className="text-xl font-light tracking-tight">
-                  tarefas<span className="text-magenta">.</span>
+                  gerenciador<span className="text-magenta">.</span>
                 </Link>
                 <nav className="flex items-center gap-2">
                   <Link

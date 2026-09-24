@@ -10,6 +10,7 @@ resource "google_project_service" "apis" {
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
     "sts.googleapis.com",
+    "secretmanager.googleapis.com",
   ])
   service            = each.value
   disable_on_destroy = false
@@ -46,8 +47,9 @@ resource "google_artifact_registry_repository" "servicos" {
 
 # ---------------------------------------------------------------- Identidades
 
-# Identidade do container em execução. Não recebe papel nenhum: a aplicação
-# não chama API do Google. Sem esta conta dedicada, o Cloud Run usaria a
+# Identidade do container em execução. O único acesso que recebe é a leitura
+# do segredo de origem (mais abaixo). Sem esta conta dedicada, o Cloud Run
+# usaria a
 # conta padrão do Compute, que tem papel de editor no projeto inteiro.
 resource "google_service_account" "tarefas_run" {
   account_id   = "tarefas-run"
@@ -81,6 +83,42 @@ resource "google_service_account_iam_member" "deploy_usa_tarefas_run" {
   service_account_id = google_service_account.tarefas_run.name
   role               = "roles/iam.serviceAccountUser"
   member             = "serviceAccount:${google_service_account.deploy.email}"
+}
+
+# ---------------------------------------------------------------- Segredo de origem
+
+# O Cloudflare acrescenta este valor num cabeçalho de toda requisição, e a
+# aplicação recusa o que chega sem ele. É o que impede um robô de pular o
+# Cloudflare indo direto ao Cloud Run. O valor nasce aqui e fica no estado do
+# Terraform (bucket privado) e no Secret Manager, nunca no repositório.
+resource "random_password" "segredo_origem" {
+  length  = 48
+  special = false
+}
+
+resource "google_secret_manager_secret" "segredo_origem" {
+  secret_id = "segredo-origem"
+  replication {
+    auto {}
+  }
+  depends_on = [google_project_service.apis]
+}
+
+resource "google_secret_manager_secret_version" "segredo_origem" {
+  secret      = google_secret_manager_secret.segredo_origem.id
+  secret_data = random_password.segredo_origem.result
+}
+
+# O container lê o segredo para conferir o cabeçalho. A esteira lê para testar
+# a revisão nova direto no Cloud Run antes de liberar o tráfego.
+resource "google_secret_manager_secret_iam_member" "leitores_segredo_origem" {
+  for_each = {
+    container = google_service_account.tarefas_run.email
+    deploy    = google_service_account.deploy.email
+  }
+  secret_id = google_secret_manager_secret.segredo_origem.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${each.value}"
 }
 
 # ---------------------------------------------------------------- Workload Identity
@@ -146,6 +184,16 @@ resource "google_cloud_run_v2_service" "tarefas" {
         container_port = 8080
       }
 
+      env {
+        name = "ORIGEM_SEGREDO"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.segredo_origem.secret_id
+            version = "latest"
+          }
+        }
+      }
+
       resources {
         limits = {
           cpu    = "1"
@@ -179,9 +227,15 @@ resource "google_cloud_run_v2_service" "tarefas" {
     ]
   }
 
-  depends_on = [google_project_service.apis]
+  depends_on = [
+    google_project_service.apis,
+    google_secret_manager_secret_version.segredo_origem,
+    google_secret_manager_secret_iam_member.leitores_segredo_origem,
+  ]
 }
 
+# Público no nível do Google. Quem filtra robôs é o Cloudflare, e quem recusa o
+# que não passou por ele é a própria aplicação.
 resource "google_cloud_run_v2_service_iam_member" "acesso_publico" {
   name     = google_cloud_run_v2_service.tarefas.name
   location = var.regiao

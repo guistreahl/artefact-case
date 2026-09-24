@@ -12,6 +12,12 @@ export default defineConfig({
   reporter: process.env.CI ? [["github"], ["list"]] : "list",
   use: {
     baseURL: urlExterna ?? "http://localhost:3000",
+    // Em produção, a aplicação só responde a quem traz o cabeçalho que o
+    // Cloudflare acrescenta. O deploy lê o segredo do Secret Manager e o passa
+    // aqui para testar a revisão nova direto no Cloud Run.
+    extraHTTPHeaders: process.env.CABECALHO_ORIGEM
+      ? { "x-origem-cloudflare": process.env.CABECALHO_ORIGEM }
+      : undefined,
     trace: "retain-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],

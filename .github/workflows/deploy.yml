@@ -79,6 +79,15 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
+      - name: Ler o segredo de origem
+        # Em produção, a aplicação recusa o que não traz o cabeçalho que o
+        # Cloudflare acrescenta. Para testar a revisão direto no Cloud Run, a
+        # esteira lê o mesmo valor do Secret Manager, mascarado no log.
+        run: |
+          SEGREDO=$(gcloud secrets versions access latest --secret=segredo-origem --project "$PROJETO")
+          echo "::add-mask::$SEGREDO"
+          echo "CABECALHO_ORIGEM=$SEGREDO" >> "$GITHUB_ENV"
+
       - name: Testar a revisão nova antes de liberar
         env:
           BASE_URL: ${{ env.URL_REVISAO }}
@@ -102,6 +111,11 @@ jobs:
         run: |
           URL=$(gcloud run services describe "$SERVICO" --region "$REGIAO" --format='value(status.url)')
           curl -fsS "$URL/api/saude"
-          # O domínio depende do DNS e do certificado, que ficam fora da
-          # esteira. Se ele não responder, o deploy não falha, mas avisa.
-          curl -fsS --max-time 10 "https://${DOMINIO}/api/saude" || echo "::warning::https://${DOMINIO} não respondeu. Conferir DNS e certificado."
+          # O domínio passa pelo Cloudflare, que desafia quem não é navegador
+          # (403 aqui é o esperado). Só a falta de resposta é problema, e mesmo
+          # assim não derruba o deploy: DNS e certificado ficam fora da esteira.
+          CODIGO=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 10 "https://${DOMINIO}/" || true)
+          echo "https://${DOMINIO} respondeu $CODIGO"
+          if [ "$CODIGO" = "000" ]; then
+            echo "::warning::https://${DOMINIO} não respondeu. Conferir DNS e certificado."
+          fi

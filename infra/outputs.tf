@@ -17,3 +17,9 @@ output "registros_dns" {
   description = "O que criar no DNS para o domínio apontar para o Cloud Run."
   value       = google_cloud_run_domain_mapping.tarefas.status[0].resource_records
 }
+
+output "segredo_origem" {
+  description = "Valor do cabeçalho x-origem-cloudflare, para a regra de transformação do Cloudflare."
+  value       = random_password.segredo_origem.result
+  sensitive   = true
+}

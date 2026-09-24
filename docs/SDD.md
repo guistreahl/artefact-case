@@ -47,7 +47,7 @@ Publicado em `https://gerenciador.guistreahl.com.br`.
 | C11 | Botões desabilitados durante o envio, avisos flutuantes de sucesso e erro, estados de lista vazia e de falha | `src/components/Avisos.tsx`, `src/components/` |
 | C12 | `useInfiniteQuery` com paginação por cursor e `IntersectionObserver` | `src/components/ListaTarefas.tsx` |
 | C13 | Comentários nos pontos de decisão, README e este documento | todo o repositório |
-| C14 | Tarefas de exemplo fictícias, nenhuma chave ou segredo no repositório | seção 6.3 |
+| C14 | Tarefas de exemplo fictícias, nenhuma chave ou segredo no repositório | seção 6.4 |
 
 ### 2.2 Além do enunciado
 
@@ -306,6 +306,8 @@ docker build ──► Artifact Registry   servicos/tarefas:<sha>
                  Cloud Run "tarefas" (us-central1)
                  identidade "tarefas-run", sem papel nenhum
                          ▲
+Cloudflare (proxy): desafio para robôs, limite por IP, cabeçalho secreto
+   ▼
 DNS: CNAME gerenciador ► ghs.googlehosted.com + domain mapping do Cloud Run
 ```
 
@@ -315,10 +317,11 @@ Todos descritos em Terraform, em `infra/`.
 
 | Recurso | Configuração |
 |---|---|
-| APIs | Cloud Run, Artifact Registry, IAM, IAM Credentials, STS |
+| APIs | Cloud Run, Artifact Registry, IAM, IAM Credentials, STS, Secret Manager |
 | Artifact Registry | Repositório Docker `servicos`, mantém as 10 imagens mais recentes |
 | SA `deploy` | Publica imagens no repositório e revisões no serviço. Nada além disso |
-| SA `tarefas-run` | Identidade do container. Sem papel, porque a aplicação não chama API do Google |
+| SA `tarefas-run` | Identidade do container. Só lê o segredo de origem |
+| Secret Manager | `segredo-origem`, gerado pelo Terraform (seção 6.3) |
 | Workload Identity | Pool e provider para o emissor OIDC do GitHub |
 | Cloud Run `tarefas` | Máximo de 1 instância, mínimo de 0, 512 MiB, 1 vCPU, acesso público |
 | Domain mapping | `gerenciador.guistreahl.com.br` |
@@ -375,7 +378,8 @@ termine depois do de um commit mais novo.
 1. Autentica no Google pelo Workload Identity
 2. Monta a imagem e publica com a tag do commit
 3. Cria a revisão nova **sem tráfego**, com uma URL própria
-4. Roda o Playwright contra essa URL
+4. Lê o segredo de origem no Secret Manager e roda o Playwright contra essa
+   URL, enviando o cabeçalho
 5. Passa 100% do tráfego para a revisão nova
 6. Confere `/api/saude` na URL do serviço e, sem bloquear, no domínio
 
@@ -405,7 +409,46 @@ pull request não precisa do Google.
 As três referências que o deploy usa (projeto, provider e service account)
 ficam em Variables do GitHub. Sozinhas, não dão acesso a nada.
 
-### 6.3 Repositório público
+### 6.3 Proteção contra robôs e ataques comuns
+
+A aplicação só deve ser usada por pessoas. São três camadas, da borda para
+dentro:
+
+**1. Cloudflare, com o proxy ligado no registro `gerenciador`**
+
+| Configuração | Efeito |
+|---|---|
+| Regra personalizada: `http.host eq "gerenciador.guistreahl.com.br"` → *Managed Challenge* | Todo visitante passa pelo desafio do Cloudflare, quase sempre sem interação. Robôs param aqui |
+| Bot Fight Mode | Bloqueia robôs conhecidos antes da regra acima |
+| Rate limiting: `/api/trpc`, 100 requisições em 10 s por IP → bloqueio | Contém rajadas contra a API |
+| Transform Rule: acrescenta `x-origem-cloudflare: <segredo>` | Prova, para a aplicação, que a requisição passou pelo Cloudflare |
+| SSL *Full (strict)*, *Always Use HTTPS*, TLS mínimo 1.2 | Tráfego cifrado de ponta a ponta, com o certificado do Google validado |
+
+O proxy só é ligado depois que o Google emite o certificado do domínio: com
+ele ligado desde o início, a validação do Google não chega ao Cloud Run.
+
+**2. Trava na origem**
+
+O Cloud Run continua acessível pelo endereço `run.app` e pelos IPs do Google,
+e um robô poderia chegar por ali sem passar pelo Cloudflare. Por isso o
+`middleware.ts` recusa com 403 toda requisição sem o cabeçalho
+`x-origem-cloudflare` com o valor certo, comparado em tempo constante.
+
+O segredo é gerado pelo Terraform (`random_password`), guardado no Secret
+Manager e entregue ao container como variável de ambiente. Não está no
+repositório. Sem a variável (desenvolvimento, testes, quem roda localmente), a
+trava fica desligada. Só `/api/saude` fica de fora, porque a sonda do Cloud
+Run não passa pelo Cloudflare, e ela não devolve dado nenhum.
+
+**3. Na aplicação**
+
+1. Até 60 alterações por minuto por IP (`TOO_MANY_REQUESTS` depois disso). O
+   contador fica em memória, o que funciona porque o serviço tem uma
+   instância só.
+2. Limites de tamanho nos campos e de tarefas por sessão (seção 3.3).
+3. `robots.txt` com `Disallow: /`, cabeçalho `X-Robots-Tag: noindex` e HSTS.
+
+### 6.4 Repositório público
 
 Nenhum segredo, nenhum dado pessoal, nenhum arquivo de estado do Terraform.
 Todas as tarefas de exemplo são fictícias.

@@ -17,6 +17,7 @@ playwright/.cache/
 *.tfstate
 *.tfstate.*
 *.tfvars
+*.tfplan
 .terraform/
 *.pdf
 
