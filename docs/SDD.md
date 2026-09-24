@@ -292,8 +292,10 @@ component uses a colour outside them.
 | `mist` | `#f0f0f0` | Background in light mode |
 | `error` | `#c4231a` | Error messages, delete confirmation button |
 
-**Typography:** Roboto (300, 400, 500 and 700), served by the app itself with
-`next/font`. Titles in weight 300.
+**Typography:** Roboto (300, 400, 500 and 700), with the font files in the
+repository (`src/app/fonts/`), served by the app itself through
+`next/font/local`. The build does not depend on Google Fonts. Titles in
+weight 300.
 
 **Contrast:** the brand magenta with white text is 3.9:1, below the 4.5:1
 required for small text. Buttons and links use `magenta-strong` (4.9:1), and

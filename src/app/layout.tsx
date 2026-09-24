@@ -1,15 +1,21 @@
 import type { Metadata, Viewport } from "next";
-import { Roboto } from "next/font/google";
+import localFont from "next/font/local";
 import Link from "next/link";
 import { ToastProvider } from "@/components/Toasts";
 import { Providers } from "@/trpc/client";
 import "./globals.css";
 
-// Downloaded at build time and served by the app itself: the browser makes no
-// request to Google Fonts.
-const roboto = Roboto({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
+// Font files live in the repository (Roboto, OFL-1.1, from Fontsource) and are
+// served by the app itself. Neither the build nor the browser depends on
+// Google Fonts: a build once failed when that download returned an
+// unexpected response.
+const roboto = localFont({
+  src: [
+    { path: "./fonts/roboto-latin-300-normal.woff2", weight: "300", style: "normal" },
+    { path: "./fonts/roboto-latin-400-normal.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/roboto-latin-500-normal.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/roboto-latin-700-normal.woff2", weight: "700", style: "normal" },
+  ],
   variable: "--font-roboto",
   display: "swap",
 });
