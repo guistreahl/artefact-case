@@ -9,6 +9,7 @@ import { TAMANHO_PAGINA } from "@/lib/constantes";
 import { formatarData } from "@/lib/formatar";
 import type { Tarefa } from "@/server/tarefas/schema";
 import { Aviso, type DadosAviso } from "./Aviso";
+import { ConfirmarExclusao } from "./ConfirmarExclusao";
 
 type Props = { avisoInicial?: string };
 
@@ -20,6 +21,7 @@ export function ListaTarefas({ avisoInicial }: Props) {
     avisoInicial ? { tipo: "sucesso", mensagem: avisoInicial } : null,
   );
   const fecharAviso = useCallback(() => setAviso(null), []);
+  const [paraExcluir, setParaExcluir] = useState<Tarefa | null>(null);
 
   // O aviso de "criada" ou "atualizada" chega pela URL. Depois de mostrado, a
   // URL é limpa para ele não reaparecer ao recarregar a página.
@@ -70,9 +72,15 @@ export function ListaTarefas({ avisoInicial }: Props) {
       onMutate: async ({ id, concluida }) => {
         await queryClient.cancelQueries({ queryKey: chaveLista });
         const anterior = queryClient.getQueryData(chaveLista);
-        alterarNoCache((itens) => itens.map((t) => (t.id === id ? { ...t, concluida } : t)));
+        // Horário provisório, do relógio do navegador. O do servidor substitui
+        // este assim que a resposta chega.
+        const dataConclusao = concluida ? new Date().toISOString() : undefined;
+        alterarNoCache((itens) =>
+          itens.map((t) => (t.id === id ? { ...t, concluida, dataConclusao } : t)),
+        );
         return { anterior };
       },
+      onSuccess: (tarefa) => alterarNoCache((itens) => itens.map((t) => (t.id === tarefa.id ? tarefa : t))),
       onError: (erro, _variaveis, resultado) => {
         if (resultado?.anterior) queryClient.setQueryData(chaveLista, resultado.anterior);
         setAviso({ tipo: "erro", mensagem: `Não foi possível atualizar: ${erro.message}` });
@@ -115,11 +123,20 @@ export function ListaTarefas({ avisoInicial }: Props) {
               key={tarefa.id}
               tarefa={tarefa}
               aoConcluir={(concluida) => concluir.mutate({ id: tarefa.id, concluida })}
-              aoExcluir={() => remover.mutate({ id: tarefa.id })}
+              aoExcluir={() => setParaExcluir(tarefa)}
             />
           ))}
         </ul>
       )}
+
+      <ConfirmarExclusao
+        tarefa={paraExcluir}
+        aoConfirmar={(tarefa) => {
+          setParaExcluir(null);
+          remover.mutate({ id: tarefa.id });
+        }}
+        aoFechar={() => setParaExcluir(null)}
+      />
 
       <div ref={sentinela} aria-hidden="true" />
       <p className="texto-suave py-6 text-center text-sm" aria-live="polite">
@@ -201,7 +218,15 @@ function ItemTarefa({ tarefa, aoConcluir, aoExcluir }: PropsItem) {
         )}
         <p className="texto-suave mt-2 text-xs">
           Criada em <time dateTime={tarefa.dataCriacao}>{formatarData(tarefa.dataCriacao)}</time>
-          {concluida && " · Concluída"}
+          {concluida &&
+            (tarefa.dataConclusao ? (
+              <>
+                {" · Concluída em "}
+                <time dateTime={tarefa.dataConclusao}>{formatarData(tarefa.dataConclusao)}</time>
+              </>
+            ) : (
+              " · Concluída"
+            ))}
         </p>
       </div>
 

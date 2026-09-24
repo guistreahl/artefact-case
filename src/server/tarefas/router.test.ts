@@ -69,15 +69,31 @@ describe("atualizar", () => {
 });
 
 describe("concluir", () => {
-  it("toda tarefa nasce pendente, e concluir alterna o estado sem mexer no resto", async () => {
+  it("registra o horário da conclusão e o apaga ao reabrir", async () => {
+    let agora = new Date("2026-09-24T12:00:00.000Z");
+    repositorio = new RepositorioTarefas(() => agora);
     const tarefa = await caller().tarefas.criar({ titulo: "Concluir" });
     expect(tarefa.concluida).toBe(false);
+    expect(tarefa.dataConclusao).toBeUndefined();
 
+    agora = new Date("2026-09-24T15:30:00.000Z");
     const concluida = await caller().tarefas.concluir({ id: tarefa.id, concluida: true });
-    expect(concluida).toEqual({ ...tarefa, concluida: true });
+    expect(concluida).toEqual({ ...tarefa, concluida: true, dataConclusao: "2026-09-24T15:30:00.000Z" });
 
     const reaberta = await caller().tarefas.concluir({ id: tarefa.id, concluida: false });
     expect(reaberta.concluida).toBe(false);
+    expect(reaberta.dataConclusao).toBeUndefined();
+  });
+
+  it("concluir de novo uma tarefa concluída mantém o horário original", async () => {
+    let agora = new Date("2026-09-24T12:00:00.000Z");
+    repositorio = new RepositorioTarefas(() => agora);
+    const tarefa = await caller().tarefas.criar({ titulo: "Uma vez só" });
+    await caller().tarefas.concluir({ id: tarefa.id, concluida: true });
+
+    agora = new Date("2026-09-24T18:00:00.000Z");
+    const denovo = await caller().tarefas.concluir({ id: tarefa.id, concluida: true });
+    expect(denovo.dataConclusao).toBe("2026-09-24T12:00:00.000Z");
   });
 
   it("editar pelo formulário preserva a conclusão", async () => {
@@ -85,6 +101,7 @@ describe("concluir", () => {
     await caller().tarefas.concluir({ id: tarefa.id, concluida: true });
     const editada = await caller().tarefas.atualizar({ id: tarefa.id, titulo: "Depois" });
     expect(editada.concluida).toBe(true);
+    expect(editada.dataConclusao).toBeDefined();
   });
 
   it("devolve NOT_FOUND para tarefa inexistente", async () => {

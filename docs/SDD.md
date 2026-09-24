@@ -41,7 +41,7 @@ Publicado em `https://gerenciador.guistreahl.com.br`.
 | C5 | O mesmo schema Zod valida no formulário e no servidor | `src/server/tarefas/schema.ts` |
 | C6 | `NOT_FOUND` para `id` inexistente, `BAD_REQUEST` com o erro de cada campo | `src/server/tarefas/router.ts`, `src/server/trpc.ts` |
 | C7 | Server Component busca a primeira página e entrega o cache hidratado ao cliente | `src/app/page.tsx` |
-| C8 | Exclusão otimista: a tarefa sai na hora e volta com aviso se o servidor recusar | `src/components/ListaTarefas.tsx` |
+| C8 | Confirmação num diálogo, depois exclusão otimista: a tarefa sai na hora e volta com aviso se o servidor recusar | `src/components/ConfirmarExclusao.tsx`, `src/components/ListaTarefas.tsx` |
 | C9 | Um único `FormTarefa` para criar e editar, com `useState` | `src/components/FormTarefa.tsx` |
 | C10 | Envio bloqueado com título vazio, erro mostrado embaixo do campo | `src/components/FormTarefa.tsx` |
 | C11 | Botões desabilitados durante o envio, avisos de sucesso e erro, estados de lista vazia e de falha | `src/components/` |
@@ -53,11 +53,12 @@ Publicado em `https://gerenciador.guistreahl.com.br`.
 
 | O quê | Por quê |
 |---|---|
-| Campo `concluida` e procedimento `concluir` | É a ação mais comum numa lista de tarefas. O case pede "pelo menos" os quatro campos, então o modelo pode crescer |
+| Campos `concluida` e `dataConclusao`, e o procedimento `concluir` | É a ação mais comum numa lista de tarefas, e o horário registra quando ela aconteceu. O case pede "pelo menos" os quatro campos, então o modelo pode crescer |
+| Confirmação antes de excluir | Excluir não tem volta. Um clique errado no botão não pode apagar uma tarefa |
 | Uma lista por visitante | O endereço é público. Com uma lista única, cada pessoa veria o que as anteriores escreveram (seção 3.3) |
-| Painel de boas-vindas e tarefas-roteiro | Quem abre a aplicação pela primeira vez aprende a usar sem ler documentação (seção 3.6) |
+| Painel de boas-vindas e tarefas-roteiro | Quem abre a aplicação pela primeira vez aprende a usar sem ler documentação (seção 3.7) |
 | Tarefas de exemplo em toda sessão nova | A lista nunca abre vazia e a rolagem infinita tem o que carregar |
-| Design system próprio | Paleta e tipografia inspiradas na identidade da Artefact, em tokens (seção 3.7) |
+| Design system próprio | Paleta e tipografia inspiradas na identidade da Artefact, em tokens (seção 3.8) |
 | Testes de unidade e de navegador | Vitest no router, Playwright no fluxo completo de criar, editar, excluir e rolar |
 | Publicação no Cloud Run | A aplicação no ar, com deploy automático a cada push na `main` |
 | Infraestrutura em Terraform | Todo recurso do Google Cloud descrito no repositório |
@@ -113,6 +114,7 @@ src/
     FormTarefa.tsx
     Aviso.tsx
     BoasVindas.tsx         painel da primeira visita
+    ConfirmarExclusao.tsx  diálogo "Você deseja excluir esta tarefa?"
   middleware.ts            emite o cookie de sessão na primeira visita
 e2e/                       testes do Playwright
 infra/                     Terraform
@@ -148,6 +150,7 @@ type Tarefa = {
   titulo: string;      // 1 a 120 caracteres, sem espaços nas pontas
   descricao?: string;  // até 1000 caracteres
   concluida: boolean;  // toda tarefa nasce pendente
+  dataConclusao?: string; // ISO 8601, gravado ao concluir e apagado ao reabrir
   dataCriacao: string; // ISO 8601, definido pelo servidor
 };
 ```
@@ -160,6 +163,11 @@ type Tarefa = {
 | `tarefas.atualizar` | mutation | `{ id, titulo, descricao? }` | `BAD_REQUEST`, `NOT_FOUND` |
 | `tarefas.concluir` | mutation | `{ id, concluida }` | `NOT_FOUND` |
 | `tarefas.remover` | mutation | `{ id }` | `NOT_FOUND` |
+
+`concluir` registra `dataConclusao` com o relógio do servidor. Marcar de novo
+uma tarefa já concluída mantém o horário original, e reabrir apaga o horário.
+Na tela, a conclusão é otimista com o horário do navegador, trocado pelo do
+servidor quando a resposta chega.
 
 `listar` devolve `{ itens, proximoCursor }`, da tarefa mais nova para a mais
 antiga. O cursor é o `id` da última tarefa entregue. Com offset, excluir uma
@@ -193,7 +201,16 @@ navegador ── HydrationBoundary ──► useInfiniteQuery começa do cache, 
 IntersectionObserver ──► GET /api/trpc/tarefas.listar?cursor=...
 ```
 
-### 3.6 Primeira visita
+### 3.6 Confirmação de exclusão
+
+O botão Excluir abre um diálogo: "Você deseja excluir esta tarefa?", com o
+título da tarefa e os botões Cancelar e Excluir. É o `<dialog>` nativo, aberto
+com `showModal()`: o navegador prende o foco dentro dele, fecha com Esc, deixa
+o resto da página inerte e devolve o foco ao botão de origem. O foco começa
+em Cancelar, a opção que não destrói nada. Só a confirmação dispara o
+procedimento `remover`.
+
+### 3.7 Primeira visita
 
 Na primeira visita, a listagem abre com um painel de boas-vindas que explica
 em cinco passos como concluir, criar, editar, excluir e rolar. Ao fechar, um
@@ -206,7 +223,7 @@ As cinco primeiras tarefas de exemplo repetem o roteiro na prática: cada uma
 pede uma ação ("Marque esta tarefa como concluída", "Edite esta tarefa") e
 diz o que observar.
 
-### 3.7 Design system
+### 3.8 Design system
 
 Tokens do Tailwind 4, declarados em `@theme` no `src/app/globals.css`.
 Nenhum componente usa cor fora deles.
@@ -222,7 +239,7 @@ Nenhum componente usa cor fora deles.
 | `turquesa` | `#65cccc` | Tarefa concluída, números do painel |
 | `turquesa-escuro` | `#2ab6bf` | Contorno de foco, borda do aviso de sucesso |
 | `nevoa` | `#f0f0f0` | Fundo no modo claro |
-| `erro` | `#c4231a` | Mensagens de erro |
+| `erro` | `#c4231a` | Mensagens de erro, botão de confirmar exclusão |
 
 **Tipografia:** Roboto (300, 400, 500 e 700), servida pelo próprio app com
 `next/font`. Títulos em peso 300.
@@ -232,7 +249,7 @@ Nenhum componente usa cor fora deles.
 (4,9:1), e o magenta puro fica para detalhes decorativos.
 
 **Componentes** (`@layer components`): `titulo-pagina` (com o ponto final em
-magenta), `botao-primario`, `botao-secundario`, `link-acao`, `cartao`,
+magenta), `botao-primario`, `botao-perigo`, `botao-secundario`, `link-acao`, `cartao`,
 `campo`, `texto-suave` e `lambda`, o triângulo com brilho magenta desenhado
 em CSS.
 

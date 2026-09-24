@@ -63,14 +63,20 @@ const FICTICIAS: Exemplo[] = [
 /**
  * Uma cópia nova para cada sessão. A primeira tarefa é a mais recente, e as
  * seguintes recuam de 3 em 3 horas, então o tutorial fica no topo da lista.
+ * As concluídas registram a conclusão uma hora e meia depois da criação.
  */
 export function tarefasDeExemplo(agora: Date): Tarefa[] {
-  const TRES_HORAS = 3 * 60 * 60 * 1000;
-  return [...TUTORIAL, ...FICTICIAS].map((exemplo, i) => ({
-    id: crypto.randomUUID(),
-    titulo: exemplo.titulo,
-    descricao: exemplo.descricao,
-    concluida: exemplo.concluida ?? false,
-    dataCriacao: new Date(agora.getTime() - (i + 1) * TRES_HORAS).toISOString(),
-  }));
+  const HORA = 60 * 60 * 1000;
+  return [...TUTORIAL, ...FICTICIAS].map((exemplo, i) => {
+    const criacao = agora.getTime() - (i + 1) * 3 * HORA;
+    const concluida = exemplo.concluida ?? false;
+    return {
+      id: crypto.randomUUID(),
+      titulo: exemplo.titulo,
+      descricao: exemplo.descricao,
+      concluida,
+      dataConclusao: concluida ? new Date(criacao + 1.5 * HORA).toISOString() : undefined,
+      dataCriacao: new Date(criacao).toISOString(),
+    };
+  });
 }

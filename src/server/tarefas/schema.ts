@@ -46,6 +46,8 @@ export type Tarefa = {
   descricao?: string;
   /** Campo além do mínimo do case. Toda tarefa nasce pendente. */
   concluida: boolean;
+  /** ISO 8601, definido pelo servidor ao concluir e apagado ao reabrir. */
+  dataConclusao?: string;
   /** ISO 8601, definido pelo servidor na criação. */
   dataCriacao: string;
 };

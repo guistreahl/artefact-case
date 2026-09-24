@@ -68,6 +68,11 @@
     @apply inline-flex items-center justify-center rounded bg-magenta-forte px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-magenta-escuro disabled:cursor-not-allowed disabled:opacity-60;
   }
 
+  /* Contraste do branco sobre o vermelho de erro: 5,8:1. */
+  .botao-perigo {
+    @apply inline-flex items-center justify-center rounded bg-erro px-4 py-2 text-sm font-medium text-white transition hover:brightness-90;
+  }
+
   .botao-secundario {
     @apply inline-flex items-center justify-center rounded px-4 py-2 text-sm font-medium text-marinho transition-colors hover:bg-nevoa-borda/60 dark:text-white dark:hover:bg-marinho-superficie;
   }

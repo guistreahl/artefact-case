@@ -78,12 +78,15 @@ navegador ──► Next.js (App Router)
 4. **Erros com significado.** `NOT_FOUND` para tarefa inexistente,
    `BAD_REQUEST` com a mensagem de cada campo. O formulário mostra o erro
    embaixo do campo; a lista mostra avisos de sucesso e de erro.
-5. **Exclusão e conclusão otimistas.** A tela muda na hora e volta ao estado
+5. **Confirmação antes de excluir**, num diálogo acessível pelo teclado.
+6. **Conclusão com horário.** Marcar uma tarefa registra quando ela foi
+   concluída; reabrir apaga o registro.
+7. **Exclusão e conclusão otimistas.** A tela muda na hora e volta ao estado
    anterior, com aviso, se o servidor recusar.
-6. **Uma lista por visitante.** Um cookie anônimo separa as listas, para que
+8. **Uma lista por visitante.** Um cookie anônimo separa as listas, para que
    quem abre o endereço público veja só o que criou. Toda lista nova começa
    com 30 tarefas fictícias de exemplo.
-7. **Identidade visual** inspirada na da Artefact: marinho, magenta,
+9. **Identidade visual** inspirada na da Artefact: marinho, magenta,
    turquesa e Roboto, definidos como tokens em `src/app/globals.css`.
 
 Como tudo fica em memória, a lista recomeça quando o servidor reinicia. No
