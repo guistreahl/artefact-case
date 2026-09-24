@@ -12,15 +12,15 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/guistreahl/case-artefact/actions/workflows/ci.yml"><img src="https://github.com/guistreahl/case-artefact/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/guistreahl/case-artefact/actions/workflows/deploy.yml"><img src="https://github.com/guistreahl/case-artefact/actions/workflows/deploy.yml/badge.svg" alt="Deploy"></a>
+  <a href="https://github.com/guistreahl/artefact-case/actions/workflows/ci.yml"><img src="https://github.com/guistreahl/artefact-case/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/guistreahl/artefact-case/actions/workflows/deploy.yml"><img src="https://github.com/guistreahl/artefact-case/actions/workflows/deploy.yml/badge.svg" alt="Deploy"></a>
 </p>
 
 <p align="center">
   <img src="docs/img/demo.gif" width="800" alt="Demonstração: o painel de boas-vindas é fechado, uma tarefa é marcada como concluída, uma tarefa nova é criada e a lista é rolada até carregar mais itens.">
 </p>
 
-Na primeira visita, um painel explica como usar, e as cinco primeiras tarefas
+Na primeira visita, um painel explica como usar, e as seis primeiras tarefas
 da lista são um roteiro para experimentar cada função. O painel volta pelo
 link **Como usar**, no topo.
 
@@ -79,14 +79,17 @@ navegador ──► Next.js (App Router)
    `BAD_REQUEST` com a mensagem de cada campo. O formulário mostra o erro
    embaixo do campo; a lista mostra avisos de sucesso e de erro.
 5. **Confirmação antes de excluir**, num diálogo acessível pelo teclado.
-6. **Conclusão com horário.** Marcar uma tarefa registra quando ela foi
+6. **Ordem manual.** As tarefas são arrastáveis para cima e para baixo, com
+   mouse, toque ou teclado, e a ordem fica guardada no servidor.
+7. **Conclusão com horário.** Marcar uma tarefa registra quando ela foi
    concluída; reabrir apaga o registro.
-7. **Exclusão e conclusão otimistas.** A tela muda na hora e volta ao estado
-   anterior, com aviso, se o servidor recusar.
-8. **Uma lista por visitante.** Um cookie anônimo separa as listas, para que
+8. **Atualizações otimistas.** Excluir, concluir e mover mudam a tela na
+   hora, e ela volta ao estado anterior, com aviso, se o servidor recusar. Os
+   avisos flutuam no alto da janela, visíveis em qualquer ponto da rolagem.
+9. **Uma lista por visitante.** Um cookie anônimo separa as listas, para que
    quem abre o endereço público veja só o que criou. Toda lista nova começa
    com 30 tarefas fictícias de exemplo.
-9. **Identidade visual** inspirada na da Artefact: marinho, magenta,
+10. **Identidade visual** inspirada na da Artefact: marinho, magenta,
    turquesa e Roboto, definidos como tokens em `src/app/globals.css`.
 
 Como tudo fica em memória, a lista recomeça quando o servidor reinicia. No

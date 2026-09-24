@@ -164,6 +164,67 @@ describe("listar", () => {
   });
 });
 
+describe("mover", () => {
+  const ids = async () => (await caller().tarefas.listar({ limite: 50 })).itens.map((t) => t.id);
+
+  it("leva uma tarefa para o topo, para o meio e para o fim", async () => {
+    const inicial = await ids();
+    const [a, b, c] = inicial as [string, string, string];
+
+    await caller().tarefas.mover({ id: c, depoisDe: null });
+    expect((await ids()).slice(0, 3)).toEqual([c, a, b]);
+
+    await caller().tarefas.mover({ id: c, depoisDe: a });
+    expect((await ids()).slice(0, 3)).toEqual([a, c, b]);
+
+    await caller().tarefas.mover({ id: a, depoisDe: inicial.at(-1)! });
+    expect((await ids()).at(-1)).toBe(a);
+    expect(await ids()).toHaveLength(inicial.length);
+  });
+
+  it("tarefa criada depois de mover continua entrando no topo", async () => {
+    const [primeira, segunda] = (await ids()) as [string, string];
+    await caller().tarefas.mover({ id: segunda, depoisDe: null });
+    const nova = await caller().tarefas.criar({ titulo: "Nova" });
+    expect((await ids()).slice(0, 3)).toEqual([nova.id, segunda, primeira]);
+  });
+
+  it("a paginação continua sem repetir nem pular depois de vários movimentos", async () => {
+    const inicial = await ids();
+    for (let i = 0; i < 10; i++) {
+      await caller().tarefas.mover({ id: inicial[i * 2]!, depoisDe: inicial[29 - i]! });
+    }
+    const vistos: string[] = [];
+    let cursor: string | null = null;
+    do {
+      const pagina: { itens: { id: string }[]; proximoCursor: string | null } =
+        await caller().tarefas.listar({ cursor, limite: 7 });
+      vistos.push(...pagina.itens.map((t) => t.id));
+      cursor = pagina.proximoCursor;
+    } while (cursor);
+    expect(vistos).toEqual(await ids());
+    expect(new Set(vistos).size).toBe(TOTAL_EXEMPLOS);
+  });
+
+  it("renumera a lista quando não cabe mais uma posição entre duas vizinhas", async () => {
+    const [a, b, c] = (await ids()) as [string, string, string];
+    // Cada movimento divide ao meio o espaço entre a e a tarefa logo abaixo.
+    for (let i = 0; i < 60; i++) {
+      await caller().tarefas.mover({ id: i % 2 === 0 ? b : c, depoisDe: a });
+    }
+    const ordem = await ids();
+    expect(ordem[0]).toBe(a);
+    expect(new Set(ordem.slice(1, 3))).toEqual(new Set([b, c]));
+    expect(ordem).toHaveLength(TOTAL_EXEMPLOS);
+  });
+
+  it("devolve NOT_FOUND para tarefa ou referência inexistente", async () => {
+    const [a] = (await ids()) as [string];
+    expect(await codigoDoErro(caller().tarefas.mover({ id: "nao-existe", depoisDe: null }))).toBe("NOT_FOUND");
+    expect(await codigoDoErro(caller().tarefas.mover({ id: a, depoisDe: "nao-existe" }))).toBe("NOT_FOUND");
+  });
+});
+
 describe("sessões", () => {
   it("isola as listas de visitantes diferentes", async () => {
     const tarefa = await caller("sessao-a").tarefas.criar({ titulo: "Só da sessão A" });

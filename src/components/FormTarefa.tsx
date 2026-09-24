@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { TRPCClientError } from "@trpc/client";
 import { z } from "zod";
 import { useTRPC } from "@/trpc/client";
+import { useAvisos } from "./Avisos";
 import type { AppRouter } from "@/server/root";
 import {
   dadosTarefaSchema,
@@ -29,12 +30,19 @@ function validar(campos: Campos): ErrosCampos {
 type Props = {
   /** Sem tarefa, o formulário cria. Com tarefa, edita. */
   tarefa?: Tarefa;
+  /**
+   * Veio da listagem. Ao salvar ou cancelar, volta pelo histórico em vez de
+   * abrir a lista de novo, e o navegador devolve a rolagem ao ponto de onde a
+   * pessoa saiu, com a tarefa editada à vista.
+   */
+  voltarAoTerminar?: boolean;
 };
 
-export function FormTarefa({ tarefa }: Props) {
+export function FormTarefa({ tarefa, voltarAoTerminar = false }: Props) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const mostrarAviso = useAvisos();
   const editando = tarefa !== undefined;
 
   const [campos, setCampos] = useState<Campos>({
@@ -73,16 +81,29 @@ export function FormTarefa({ tarefa }: Props) {
 
     try {
       if (editando) {
-        await atualizar.mutateAsync({ id: tarefa.id, ...campos });
+        const atualizada = await atualizar.mutateAsync({ id: tarefa.id, ...campos });
+        // Grava a versão nova no cache da lista antes de voltar, para a
+        // tarefa não aparecer por um instante com o texto antigo.
+        queryClient.setQueriesData({ queryKey: trpc.tarefas.listar.pathKey() }, (dados) =>
+          substituirNaLista(dados, atualizada),
+        );
       } else {
         await criar.mutateAsync(campos);
       }
       setConcluido(true);
-      await queryClient.invalidateQueries({ queryKey: trpc.tarefas.listar.pathKey() });
-      router.push(`/?aviso=${editando ? "atualizada" : "criada"}`);
+      void queryClient.invalidateQueries({ queryKey: trpc.tarefas.listar.pathKey() });
+      mostrarAviso({ tipo: "sucesso", mensagem: editando ? "Tarefa atualizada." : "Tarefa criada." });
+      sair();
     } catch (erro) {
       tratarErroDoServidor(erro);
     }
+  }
+
+  // Uma tarefa nova entra no topo da lista, então criar sempre abre a lista
+  // do começo. Editar volta para onde a pessoa estava.
+  function sair() {
+    if (voltarAoTerminar) router.back();
+    else router.push("/");
   }
 
   function tratarErroDoServidor(erro: unknown) {
@@ -160,12 +181,29 @@ export function FormTarefa({ tarefa }: Props) {
         >
           {enviando ? "Salvando..." : editando ? "Salvar alterações" : "Criar tarefa"}
         </button>
-        <Link href="/" className="botao-secundario">
-          Cancelar
-        </Link>
+        {voltarAoTerminar ? (
+          <button type="button" onClick={() => router.back()} className="botao-secundario">
+            Cancelar
+          </button>
+        ) : (
+          <Link href="/" className="botao-secundario">
+            Cancelar
+          </Link>
+        )}
       </div>
     </form>
   );
+}
+
+type PaginasDaLista = { pages: Array<{ itens: Tarefa[] }> };
+
+function substituirNaLista(dados: unknown, tarefa: Tarefa): unknown {
+  const lista = dados as PaginasDaLista | undefined;
+  if (!lista?.pages) return dados;
+  return {
+    ...lista,
+    pages: lista.pages.map((p) => ({ ...p, itens: p.itens.map((t) => (t.id === tarefa.id ? tarefa : t)) })),
+  };
 }
 
 type PropsControle = {

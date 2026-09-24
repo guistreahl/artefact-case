@@ -12,7 +12,7 @@ variable "regiao" {
 variable "repositorio_github" {
   description = "Único repositório autorizado a publicar, no formato dono/nome."
   type        = string
-  default     = "guistreahl/case-artefact"
+  default     = "guistreahl/artefact-case"
 }
 
 variable "dominio" {

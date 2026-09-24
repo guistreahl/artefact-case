@@ -32,6 +32,12 @@ export const atualizarTarefaSchema = dadosTarefaSchema.extend({ id: idSchema });
 
 export const concluirTarefaSchema = z.object({ id: idSchema, concluida: z.boolean() });
 
+export const moverTarefaSchema = z.object({
+  id: idSchema,
+  /** A tarefa que fica logo acima depois do movimento. null leva para o topo. */
+  depoisDe: idSchema.nullable(),
+});
+
 export const listarTarefasSchema = z.object({
   // null na primeira página: é o valor que o useInfiniteQuery envia.
   cursor: z.string().max(200).nullish(),
@@ -50,4 +56,9 @@ export type Tarefa = {
   dataConclusao?: string;
   /** ISO 8601, definido pelo servidor na criação. */
   dataCriacao: string;
+  /**
+   * Ordem manual na lista: a menor aparece primeiro. É um número fracionário
+   * para que mover uma tarefa altere só ela, e não todas as seguintes.
+   */
+  posicao: number;
 };

@@ -5,6 +5,7 @@ import {
   concluirTarefaSchema,
   dadosTarefaSchema,
   listarTarefasSchema,
+  moverTarefaSchema,
   idSchema,
 } from "./schema";
 import { LimiteDeTarefasError } from "./store";
@@ -51,6 +52,15 @@ export const tarefasRouter = criarRouter({
       ({ ctx, input }) =>
         ctx.repositorio.definirConclusao(ctx.sessao, input.id, input.concluida) ??
         naoEncontrada(input.id),
+    ),
+
+  // NOT_FOUND tanto para a tarefa movida quanto para a referência `depoisDe`,
+  // que pode ter sido excluída em outra aba.
+  mover: procedimento
+    .input(moverTarefaSchema)
+    .mutation(
+      ({ ctx, input }) =>
+        ctx.repositorio.mover(ctx.sessao, input.id, input.depoisDe) ?? naoEncontrada(input.id),
     ),
 
   remover: procedimento.input(porId).mutation(({ ctx, input }) => {

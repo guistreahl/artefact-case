@@ -2,7 +2,7 @@ import type { Tarefa } from "./schema";
 
 type Exemplo = { titulo: string; descricao?: string; concluida?: boolean };
 
-// As cinco primeiras ensinam a usar a aplicação fazendo: cada uma pede uma
+// As seis primeiras ensinam a usar a aplicação fazendo: cada uma pede uma
 // ação e diz o que observar. O resto é conteúdo fictício, para a lista ter
 // volume e a rolagem infinita ter mais de uma página para carregar.
 const TUTORIAL: Exemplo[] = [
@@ -22,6 +22,11 @@ const TUTORIAL: Exemplo[] = [
   {
     titulo: "Crie uma tarefa nova",
     descricao: "Use o botão Nova tarefa, no alto da página. Ela aparece no início desta lista.",
+  },
+  {
+    titulo: "Arraste esta tarefa para outra posição",
+    descricao:
+      "Segure o puxador de seis pontos, à esquerda, e solte onde quiser. Pelo teclado: foco no puxador, espaço, setas e espaço de novo.",
   },
   {
     titulo: "Role até o fim da lista",
@@ -56,7 +61,6 @@ const FICTICIAS: Exemplo[] = [
   { titulo: "Pesquisar passagens para as férias", descricao: "Comparar datas de julho e agosto." },
   { titulo: "Limpar a caixa de entrada" },
   { titulo: "Regar as plantas da varanda", concluida: true },
-  { titulo: "Imprimir os documentos para o cartório" },
   { titulo: "Fazer a lista de compras da semana", descricao: "Frutas, arroz, feijão, ovos e pão." },
 ];
 
@@ -77,6 +81,7 @@ export function tarefasDeExemplo(agora: Date): Tarefa[] {
       concluida,
       dataConclusao: concluida ? new Date(criacao + 1.5 * HORA).toISOString() : undefined,
       dataCriacao: new Date(criacao).toISOString(),
+      posicao: i,
     };
   });
 }
