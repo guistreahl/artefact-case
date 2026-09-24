@@ -135,17 +135,25 @@ Each addition has a reason, detailed in the [SDD](docs/SDD.md):
 Field names follow the case (`titulo`, `descricao`, `dataCriacao`); the rest
 of the code is in English.
 
-## Next steps
+## Next steps (after the case)
 
-This is the scope delivered for the case. The natural next steps:
+The scope asked by the case is complete. Ideas for after it:
 
-1. **Export to a calendar file.** A button to download the tasks as an
+1. **Tags and categories.** Label tasks (work, personal, urgent) with colored
+   tags from the design system, and filter the list by tag. It adds a tag
+   field to the task model and a filter to the `tasks.list` procedure.
+2. **Email reminders.** Send an email when a task's due date approaches. It
+   needs a due date on the task, user accounts (to know where to send), a
+   scheduled job (Cloud Scheduler calling the app) and an email provider.
+3. **Export to a calendar file.** A button to download the tasks as an
    `.ics` file (iCalendar), which Google Calendar, Outlook and Apple Calendar
    import. It needs a due date on the task, so each task can become an event.
-2. **Google Calendar integration.** Sign in with Google (OAuth) and sync tasks
+4. **Google Calendar integration.** Sign in with Google (OAuth) and sync tasks
    that have a due date with the user's calendar through the Google Calendar
-   API, keeping both sides up to date. Besides the due date, this needs user
-   accounts and a database in place of the in-memory list.
+   API, keeping both sides up to date.
+
+Items 2 and 4 also need user accounts and a database in place of the
+in-memory list, which would also let the service run more than one instance.
 
 ## Run locally
 
