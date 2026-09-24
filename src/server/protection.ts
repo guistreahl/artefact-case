@@ -63,6 +63,7 @@ export function clientIp(headers: Headers): string | undefined {
   return headers.get("cf-connecting-ip") ?? headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? undefined;
 }
 
-// 60 changes per minute per visitor: plenty for a person, tight for a script.
+// 120 changes per minute per IP: plenty for a person (and for the browser
+// tests, which all share one IP), tight for a script hammering the API.
 const global = globalThis as typeof globalThis & { __mutationLimiter?: RateLimiter };
-export const mutationLimiter = (global.__mutationLimiter ??= new RateLimiter(60, 60_000));
+export const mutationLimiter = (global.__mutationLimiter ??= new RateLimiter(120, 60_000));

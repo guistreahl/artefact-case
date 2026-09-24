@@ -59,8 +59,7 @@ Live at `https://gerenciador.guistreahl.com.br`.
 | Floating notices | Fixed to the top of the window. A notice at the top of the list would go unseen by someone scrolled down |
 | Back to the same spot after editing | Editing a task far down the list does not lose your place |
 | One list per visitor | The address is public. With a single list, each person would see what the previous ones wrote (section 3.3) |
-| Welcome panel and walkthrough tasks | A first-time visitor learns how to use the app without reading documentation (section 3.8) |
-| Sample tasks in every new session | The list never opens empty and the infinite scroll has something to load |
+| Welcome panel and two sample tasks | A first-time visitor learns how to use the app without reading documentation, and the list never opens empty (section 3.8) |
 | Own design system | Palette and typography inspired by Artefact's identity, as tokens (section 3.9) |
 | Unit and browser tests | Vitest on the router, Playwright on the full flow of creating, editing, deleting and scrolling |
 | Deployment to Cloud Run | The app is live, with an automatic deploy on every push to `main` |
@@ -105,7 +104,7 @@ src/
   server/
     tasks/schema.ts        Zod schemas and the Task type
     tasks/store.ts         in-memory Map, cursor pagination, manual order
-    tasks/samples.ts       the 30 fictional tasks of every new session
+    tasks/samples.ts       the two sample tasks of every new session
     tasks/router.ts        tRPC procedures
     tasks/router.test.ts   unit tests
     trpc.ts                tRPC setup, required session, change limit, error format
@@ -267,12 +266,19 @@ On the first visit, the list opens with a welcome panel that explains in six
 steps how to complete, create, edit, delete, reorder and scroll. When closed,
 a `welcome` cookie records that it was seen. The server decides whether to
 show the panel, by reading that cookie during SSR, so the page arrives with
-or without it and nothing flickers. The "How to use" link in the header opens
-the list with `?help=1`, and the panel comes back.
+or without it and nothing flickers.
 
-The first six sample tasks repeat the walkthrough in practice: each one asks
-for an action ("Mark this task as completed", "Edit this task") and says what
-to look for.
+The "How to use" link in the header reopens the panel. On the list page it
+does so in place: it fires an event the mounted panel answers, with no
+navigation that could race with a quick close-then-click. From any other
+page it opens the list with `?help=1`, and closing the panel cleans the URL
+with `history.replaceState`.
+
+Every new session starts with two sample tasks ("Mark this task as
+completed", "Drag this task above the other one"): enough to try completing,
+dragging, editing and deleting right away, and the minimum for dragging to
+make sense. The list loads 10 tasks at a time, so the infinite scroll shows
+up once more than 10 tasks exist; the welcome panel says so.
 
 ### 3.9 Design system
 
@@ -467,7 +473,7 @@ returns no data.
 
 **3. In the app**
 
-1. Up to 60 changes per minute per IP (`TOO_MANY_REQUESTS` past that). The
+1. Up to 120 changes per minute per IP (`TOO_MANY_REQUESTS` past that). The
    counter lives in memory, which works because the service has a single
    instance.
 2. Field size limits and a task limit per session (section 3.3).

@@ -17,11 +17,12 @@
 </p>
 
 <p align="center">
-  <img src="docs/img/demo.gif" width="800" alt="Demo: the welcome panel is closed, a task is completed, a task is dragged to the top, a task is deleted after confirmation, a new task is created and the list is scrolled to load more.">
+  <img src="docs/img/demo.gif" width="800" alt="Demo: the welcome panel is closed, a task is completed, a task is dragged to the top, a new task is created and a task is deleted after confirmation.">
 </p>
 
-On the first visit, a panel explains how to use the app, and the first six
-tasks in the list are a walkthrough to try every feature. The panel comes back
+On the first visit, a panel explains how to use the app, and the list starts
+with two sample tasks to try every feature. The list loads 10 tasks at a time:
+**create more than 10 to see the infinite scroll**. The panel comes back
 through the **How to use** link at the top.
 
 ## What the case asked

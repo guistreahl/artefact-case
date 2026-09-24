@@ -9,7 +9,7 @@ const STEPS = [
   { name: "Edit", text: "Every task has an Edit button that opens the form already filled in." },
   { name: "Delete", text: "The Delete button asks for confirmation before removing." },
   { name: "Reorder", text: "Drag by the six-dot handle on the left of each task." },
-  { name: "Scroll", text: "The list loads 10 at a time as you get close to the end." },
+  { name: "Scroll", text: "The list loads 10 at a time. Past 10 tasks, the rest loads as you scroll." },
 ];
 
 type Props = { initiallyOpen: boolean };
@@ -24,7 +24,9 @@ export function Welcome({ initiallyOpen }: Props) {
   const [open, setOpen] = useState(initiallyOpen);
 
   useEffect(() => {
-    function show() {
+    function show(event: Event) {
+      // Tells the "How to use" link the panel handled it, so it skips navigating.
+      event.preventDefault();
       setOpen(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -55,7 +57,7 @@ export function Welcome({ initiallyOpen }: Props) {
         </h2>
         <p className="mt-2 max-w-xl text-sm text-white/75">
           This list is separate for each visitor and kept in the server&apos;s memory. It starts with
-          sample tasks; the first six are a quick walkthrough.
+          two sample tasks to try things out.
         </p>
 
         <ol className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

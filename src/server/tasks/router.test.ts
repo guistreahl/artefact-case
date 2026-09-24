@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createCaller } from "../root";
 import { MAX_SESSIONS, MAX_TASKS_PER_SESSION, TaskStore } from "./store";
 
-const SAMPLE_COUNT = 30;
+const SAMPLE_COUNT = 2;
+/** Enough tasks for several pages: pagination and ordering need volume. */
+const VOLUME = 30;
 
 let store: TaskStore;
 const caller = (session = "session-a") => createCaller({ session, store });
@@ -16,6 +18,13 @@ async function errorCode(promise: Promise<unknown>): Promise<string> {
     throw error;
   }
   throw new Error("an error was expected");
+}
+
+/** Creates tasks until the session holds `total` of them. */
+async function fillTo(total: number, session = "session-a") {
+  for (let i = SAMPLE_COUNT; i < total; i++) {
+    await caller(session).tasks.create({ titulo: `Task ${i}` });
+  }
 }
 
 beforeEach(() => {
@@ -135,6 +144,7 @@ describe("list", () => {
   });
 
   it("walks every page through the cursor, with no repeats or gaps", async () => {
+    await fillTo(VOLUME);
     const seen: string[] = [];
     let cursor: string | null = null;
     do {
@@ -146,11 +156,12 @@ describe("list", () => {
       cursor = page.nextCursor;
     } while (cursor);
 
-    expect(seen).toHaveLength(SAMPLE_COUNT);
-    expect(new Set(seen).size).toBe(SAMPLE_COUNT);
+    expect(seen).toHaveLength(VOLUME);
+    expect(new Set(seen).size).toBe(VOLUME);
   });
 
   it("does not skip an item when the page's last task is deleted before the next page", async () => {
+    await fillTo(VOLUME);
     const first = await caller().tasks.list({ limit: 10 });
     const expected = (await caller().tasks.list({ limit: 11 })).items[10];
 
@@ -168,6 +179,8 @@ describe("list", () => {
 
 describe("move", () => {
   const ids = async () => (await caller().tasks.list({ limit: 50 })).items.map((t) => t.id);
+
+  beforeEach(() => fillTo(VOLUME));
 
   it("moves a task to the top, to the middle and to the end", async () => {
     const initial = await ids();
@@ -207,7 +220,7 @@ describe("move", () => {
       cursor = page.nextCursor;
     } while (cursor);
     expect(seen).toEqual(await ids());
-    expect(new Set(seen).size).toBe(SAMPLE_COUNT);
+    expect(new Set(seen).size).toBe(VOLUME);
   });
 
   it("renumbers the list when no position fits between two neighbours", async () => {
@@ -219,7 +232,7 @@ describe("move", () => {
     const order = await ids();
     expect(order[0]).toBe(a);
     expect(new Set(order.slice(1, 3))).toEqual(new Set([b, c]));
-    expect(order).toHaveLength(SAMPLE_COUNT);
+    expect(order).toHaveLength(VOLUME);
   });
 
   it("returns NOT_FOUND for a missing task or reference", async () => {
