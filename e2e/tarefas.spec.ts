@@ -37,12 +37,36 @@ test("cria, edita e exclui uma tarefa", async ({ page }) => {
   await expect(page.getByTestId("tarefa").first()).toContainText("Tarefa editada");
 
   await page.getByRole("button", { name: "Excluir Tarefa editada" }).click();
+  const dialogo = page.getByRole("dialog", { name: "Você deseja excluir esta tarefa?" });
+  await expect(dialogo).toContainText("Tarefa editada");
+  await dialogo.getByRole("button", { name: "Excluir" }).click();
+  await expect(dialogo).toBeHidden();
   await expect(page.getByRole("status")).toHaveText(/Tarefa excluída/);
   await expect(page.getByText("Tarefa editada")).toHaveCount(0);
 
   // A exclusão foi no servidor, não só na tela.
   await page.reload();
   await expect(page.getByText("Tarefa editada")).toHaveCount(0);
+});
+
+test("cancelar a confirmação, pelo botão ou pelo Esc, mantém a tarefa", async ({ page }) => {
+  await page.goto("/");
+  const tarefa = page.getByRole("heading", { name: "Exclua esta tarefa" });
+  const dialogo = page.getByRole("dialog", { name: "Você deseja excluir esta tarefa?" });
+
+  await page.getByRole("button", { name: "Excluir Exclua esta tarefa" }).click();
+  await expect(dialogo).toBeVisible();
+  // O foco começa em Cancelar, a opção que não destrói nada.
+  await expect(dialogo.getByRole("button", { name: "Cancelar" })).toBeFocused();
+  await dialogo.getByRole("button", { name: "Cancelar" }).click();
+  await expect(dialogo).toBeHidden();
+
+  await page.getByRole("button", { name: "Excluir Exclua esta tarefa" }).click();
+  await page.keyboard.press("Escape");
+  await expect(dialogo).toBeHidden();
+
+  await page.reload();
+  await expect(tarefa).toBeVisible();
 });
 
 test("carrega mais tarefas ao rolar até o fim", async ({ page }) => {
@@ -68,14 +92,18 @@ test("marca e desmarca uma tarefa como concluída, e o estado fica no servidor",
   const caixa = page.getByRole("checkbox", { name: "Marque esta tarefa como concluída" });
   await expect(caixa).not.toBeChecked();
 
+  const item = page.getByTestId("tarefa").filter({ has: caixa });
   await caixa.check();
   await expect(caixa).toBeChecked();
+  await expect(item).toContainText(/Concluída em \d{2}\/\d{2}\/\d{4}, \d{2}:\d{2}/);
   await page.reload();
   await expect(caixa).toBeChecked();
+  await expect(item).toContainText("Concluída em");
 
   await caixa.uncheck();
   await page.reload();
   await expect(caixa).not.toBeChecked();
+  await expect(item).not.toContainText("Concluída");
 });
 
 test("o painel de boas-vindas aparece na primeira visita e volta pelo menu", async ({ page }) => {

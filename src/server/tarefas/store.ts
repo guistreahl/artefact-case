@@ -84,7 +84,7 @@ export class RepositorioTarefas {
     const tarefas = this.lista(sessao);
     const atual = tarefas.get(id);
     if (!atual) return undefined;
-    // id, dataCriacao e concluida não mudam pelo formulário de edição.
+    // id, datas e conclusão não mudam pelo formulário de edição.
     const atualizada: Tarefa = { ...atual, titulo: dados.titulo, descricao: dados.descricao };
     tarefas.set(id, atualizada);
     return atualizada;
@@ -94,7 +94,13 @@ export class RepositorioTarefas {
     const tarefas = this.lista(sessao);
     const atual = tarefas.get(id);
     if (!atual) return undefined;
-    const atualizada: Tarefa = { ...atual, concluida };
+    // Marcar de novo uma tarefa já concluída não muda o horário registrado.
+    if (atual.concluida === concluida) return atual;
+    const atualizada: Tarefa = {
+      ...atual,
+      concluida,
+      dataConclusao: concluida ? this.agora().toISOString() : undefined,
+    };
     tarefas.set(id, atualizada);
     return atualizada;
   }
