@@ -28,6 +28,19 @@ import type { Task } from "@/server/tasks/schema";
 import { ConfirmDelete } from "./ConfirmDelete";
 import { useToast } from "./Toasts";
 
+/**
+ * The server answers NOT_FOUND when a task is no longer in its memory: the
+ * instance restarted (after a deploy or a period of inactivity) and the list
+ * was reset, or the task was deleted in another tab. Either way the list on
+ * screen is stale, so it is reloaded and the notice says why.
+ */
+const GONE_MESSAGE =
+  "This task no longer exists on the server (the list may have been reset after a period of inactivity). The list was reloaded.";
+
+function isGone(error: { data?: { code?: string } | null }): boolean {
+  return error.data?.code === "NOT_FOUND";
+}
+
 export function TaskList() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
@@ -43,6 +56,11 @@ export function TaskList() {
     }),
   );
   const listKey = trpc.tasks.list.infiniteQueryKey(input);
+
+  function reloadStaleList() {
+    showToast({ kind: "error", message: GONE_MESSAGE });
+    void queryClient.invalidateQueries({ queryKey: trpc.tasks.list.pathKey() });
+  }
 
   // Applies a change to the tasks of every page already loaded.
   const updateCache = useCallback(
@@ -66,6 +84,7 @@ export function TaskList() {
       },
       onError: (error, _variables, result) => {
         if (result?.previous) queryClient.setQueryData(listKey, result.previous);
+        if (isGone(error)) return reloadStaleList();
         showToast({ kind: "error", message: `Could not delete: ${error.message}` });
       },
       onSuccess: () => showToast({ kind: "success", message: "Task deleted." }),
@@ -87,6 +106,7 @@ export function TaskList() {
       onSuccess: (task) => updateCache((items) => items.map((t) => (t.id === task.id ? task : t))),
       onError: (error, _variables, result) => {
         if (result?.previous) queryClient.setQueryData(listKey, result.previous);
+        if (isGone(error)) return reloadStaleList();
         showToast({ kind: "error", message: `Could not update: ${error.message}` });
       },
       // No success notice: the ticked circle itself is the confirmation.
@@ -123,6 +143,7 @@ export function TaskList() {
       },
       onError: (error, _variables, result) => {
         if (result?.previous) queryClient.setQueryData(listKey, result.previous);
+        if (isGone(error)) return reloadStaleList();
         showToast({ kind: "error", message: `Could not move: ${error.message}` });
       },
       onSettled: () => queryClient.invalidateQueries({ queryKey: trpc.tasks.list.pathKey() }),

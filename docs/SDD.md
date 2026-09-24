@@ -382,6 +382,11 @@ minutes without traffic, and the memory goes with it. The next visit finds
 the list reset to the sample tasks. The case does not require persistence,
 and this is expected behaviour.
 
+A page left open across a restart still shows tasks the server no longer
+has. Acting on one of them (complete, move or delete) returns `NOT_FOUND`;
+the app then reloads the list and explains, in a notice, that it may have
+been reset after a period of inactivity.
+
 ### 4.4 Image
 
 `infra/docker/Dockerfile`, in three stages (deps, build, runtime) on

@@ -197,6 +197,24 @@ test("How to use from another page opens the list with the panel", async ({ page
   await expect(panel).toHaveCount(0);
 });
 
+test("acting on a task the server no longer has reloads the list with a clear notice", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Got it, let's start" }).click();
+
+  // Simulates the server forgetting the task, as after a restart: it is
+  // deleted behind the page's back, while the page still shows it.
+  const input = encodeURIComponent(JSON.stringify({ limit: 10 }));
+  const list = await (await page.request.get(`/api/trpc/tasks.list?input=${input}`)).json();
+  const stale = list.result.data.items.find((t: { titulo: string }) => t.titulo === FIRST);
+  expect((await page.request.post("/api/trpc/tasks.delete", { data: { id: stale.id } })).ok()).toBe(true);
+
+  // A plain click, not check(): the expected outcome is that the box does NOT
+  // stay ticked, since the server refuses and the change is rolled back.
+  await page.getByRole("checkbox", { name: FIRST }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "no longer exists on the server" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: FIRST })).toHaveCount(0);
+});
+
 test("the delete notice is visible even with the list scrolled to the end", async ({ page }) => {
   await page.goto("/");
   await addTasks(page);

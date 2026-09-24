@@ -54,7 +54,7 @@ through the **How to use** link at the top.
 | Language | **TypeScript 5** (strict) | Shared types between backend and frontend |
 | Styling | **Tailwind CSS 4** | Design tokens in one file; responsive from 320px to wide screens |
 | Drag and drop | **dnd-kit** | Mouse, touch and keyboard, with screen reader announcements |
-| Tests | **Vitest** (31 unit), **Playwright** (13 browser) | Unit tests on the tRPC router; browser tests on the production build |
+| Tests | **Vitest** (31 unit), **Playwright** (14 browser) | Unit tests on the tRPC router; browser tests on the production build |
 | Runtime | **Docker** on **Google Cloud Run** | One container, scales to zero when idle |
 | Infrastructure | **Terraform** | Every Google Cloud resource described in the repository |
 | CI/CD | **GitHub Actions** with Workload Identity Federation | Deploy without any stored service account key |
