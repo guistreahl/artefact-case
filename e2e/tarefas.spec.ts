@@ -1,10 +1,34 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 // Cada teste abre um contexto novo do navegador, com cookie novo, e portanto
 // com uma lista própria. Os testes não interferem uns nos outros.
 
+/**
+ * Rola até carregar as três páginas (30 tarefas). Cada página é pedida quando
+ * o fim da lista se aproxima da tela; a rolagem se repete até ela chegar, em
+ * vez de rolar uma vez e torcer para a resposta vir dentro do prazo.
+ */
+async function rolarAteOFim(page: Page) {
+  const tarefas = page.getByTestId("tarefa");
+  await expect(tarefas).toHaveCount(10);
+  for (const total of [20, 30]) {
+    await expect(async () => {
+      await tarefas.last().scrollIntoViewIfNeeded();
+      await page.mouse.wheel(0, 1500);
+      await expect(tarefas).toHaveCount(total, { timeout: 2000 });
+    }).toPass({ timeout: 20_000 });
+  }
+}
+
 test("a listagem chega pronta do servidor, sem depender de JavaScript", async ({ browser }) => {
-  const contexto = await browser.newContext({ javaScriptEnabled: false });
+  // Contexto criado à mão não herda as opções do playwright.config.ts, então o
+  // cabeçalho de origem (usado no deploy) é repassado aqui.
+  const contexto = await browser.newContext({
+    javaScriptEnabled: false,
+    extraHTTPHeaders: process.env.CABECALHO_ORIGEM
+      ? { "x-origem-cloudflare": process.env.CABECALHO_ORIGEM }
+      : undefined,
+  });
   const pagina = await contexto.newPage();
 
   await pagina.goto("/");
@@ -71,13 +95,7 @@ test("cancelar a confirmação, pelo botão ou pelo Esc, mantém a tarefa", asyn
 
 test("carrega mais tarefas ao rolar até o fim", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByTestId("tarefa")).toHaveCount(10);
-
-  await page.getByTestId("tarefa").last().scrollIntoViewIfNeeded();
-  await expect(page.getByTestId("tarefa")).toHaveCount(20);
-
-  await page.getByTestId("tarefa").last().scrollIntoViewIfNeeded();
-  await expect(page.getByTestId("tarefa")).toHaveCount(30);
+  await rolarAteOFim(page);
   await expect(page.getByText("Fim da lista.")).toBeVisible();
 });
 
@@ -132,14 +150,6 @@ test("o painel de boas-vindas aparece na primeira visita e volta pelo menu", asy
   await expect(page).toHaveURL(/\/$/);
 });
 
-/** Rola até a terceira página, onde ficam as últimas tarefas de exemplo. */
-async function rolarAteOFim(page: import("@playwright/test").Page) {
-  await expect(page.getByTestId("tarefa")).toHaveCount(10);
-  await page.getByTestId("tarefa").last().scrollIntoViewIfNeeded();
-  await expect(page.getByTestId("tarefa")).toHaveCount(20);
-  await page.getByTestId("tarefa").last().scrollIntoViewIfNeeded();
-  await expect(page.getByTestId("tarefa")).toHaveCount(30);
-}
 
 test("o aviso de exclusão aparece na tela mesmo com a lista rolada até o fim", async ({ page }) => {
   await page.goto("/");

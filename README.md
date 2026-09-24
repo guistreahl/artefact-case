@@ -122,3 +122,7 @@ Cada push na `main` que passa no CI é publicado no Cloud Run:
 
 A autenticação no Google usa Workload Identity Federation, sem chave de
 service account. A infraestrutura está descrita em [`infra/`](infra/).
+
+O domínio passa pelo Cloudflare, que desafia robôs e limita requisições por
+IP. A aplicação recusa o que não passou por ele, então o endereço direto do
+Cloud Run também fica protegido.
