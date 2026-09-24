@@ -1,459 +1,478 @@
-# SDD: gerenciador de tarefas
+# SDD: task manager
 
-Arquitetura do projeto: o que o case pede, o que foi entregue e como as
-partes se conectam, da tela até o Cloud Run.
+Project architecture: what the case asks for, what was delivered and how the
+pieces connect, from the screen down to Cloud Run.
 
-Publicado em `https://gerenciador.guistreahl.com.br`.
+Live at `https://gerenciador.guistreahl.com.br`.
 
 ---
 
-## 1. O que o case pede
+## 1. What the case asks for
 
-| # | Requisito do case |
+| # | Case requirement |
 |---|---|
-| C1 | Aplicação Next.js 15 com tRPC, frontend consumindo os endpoints do backend |
-| C2 | Tarefa com `id` gerado automaticamente, `titulo` obrigatório, `descricao` opcional e `dataCriacao` |
-| C3 | Criar, listar, atualizar e deletar via tRPC |
-| C4 | Lista mantida em memória, sem banco de dados |
-| C5 | Nenhuma tarefa criada sem título |
-| C6 | Erros com significado, como atualizar uma tarefa inexistente |
-| C7 | Listagem com SSR para pré-carregar as tarefas, em layout simples |
-| C8 | Exclusão direto na listagem, com mensagem de sucesso ou erro |
-| C9 | Formulário de criação e edição com componentes funcionais e hooks |
-| C10 | Validação no formulário, impedindo envio sem título |
-| C11 | Mensagens de erro do backend e do frontend, com estados de carregamento, sucesso e falha |
-| C12 | Bônus: infinite scroll na listagem |
-| C13 | Bônus: comentários nas decisões principais e README |
-| C14 | Repositório público, sem nenhuma informação sensível |
+| C1 | Next.js 15 app with tRPC, the frontend consuming the backend endpoints |
+| C2 | Task with an auto-generated `id`, required `titulo`, optional `descricao` and `dataCriacao` |
+| C3 | Create, list, update and delete through tRPC |
+| C4 | List kept in memory, no database |
+| C5 | No task created without a title |
+| C6 | Meaningful errors, such as updating a task that does not exist |
+| C7 | List page with SSR to preload the tasks, in a simple layout |
+| C8 | Delete straight from the list, with a success or error message |
+| C9 | Create and edit form with functional components and hooks |
+| C10 | Form validation, blocking submission without a title |
+| C11 | Error messages from backend and frontend, with loading, success and failure states |
+| C12 | Bonus: infinite scroll on the list |
+| C13 | Bonus: comments on the main decisions and a README |
+| C14 | Public repository, with no sensitive information |
 
 ---
 
-## 2. O que foi entregue
+## 2. What was delivered
 
-### 2.1 Requisitos do case
+### 2.1 Case requirements
 
-| # | Como foi atendido | Onde |
+| # | How it was met | Where |
 |---|---|---|
-| C1 | Next.js 15.5 (App Router) e tRPC 11 com TanStack Query | `src/trpc/`, `src/app/api/trpc/` |
-| C2 | `id` com `crypto.randomUUID()` e `dataCriacao` definidos pelo servidor | `src/server/tarefas/store.ts` |
-| C3 | Procedimentos `listar`, `obter`, `criar`, `atualizar` e `remover` (mais `concluir` e `mover`, seção 2.2) | `src/server/tarefas/router.ts` |
-| C4 | `Map` em memória no processo do servidor | `src/server/tarefas/store.ts` |
-| C5 | O mesmo schema Zod valida no formulário e no servidor | `src/server/tarefas/schema.ts` |
-| C6 | `NOT_FOUND` para `id` inexistente, `BAD_REQUEST` com o erro de cada campo | `src/server/tarefas/router.ts`, `src/server/trpc.ts` |
-| C7 | Server Component busca a primeira página e entrega o cache hidratado ao cliente | `src/app/page.tsx` |
-| C8 | Confirmação num diálogo, depois exclusão otimista: a tarefa sai na hora e volta com aviso se o servidor recusar | `src/components/ConfirmarExclusao.tsx`, `src/components/ListaTarefas.tsx` |
-| C9 | Um único `FormTarefa` para criar e editar, com `useState` | `src/components/FormTarefa.tsx` |
-| C10 | Envio bloqueado com título vazio, erro mostrado embaixo do campo | `src/components/FormTarefa.tsx` |
-| C11 | Botões desabilitados durante o envio, avisos flutuantes de sucesso e erro, estados de lista vazia e de falha | `src/components/Avisos.tsx`, `src/components/` |
-| C12 | `useInfiniteQuery` com paginação por cursor e `IntersectionObserver` | `src/components/ListaTarefas.tsx` |
-| C13 | Comentários nos pontos de decisão, README e este documento | todo o repositório |
-| C14 | Tarefas de exemplo fictícias, nenhuma chave ou segredo no repositório | seção 6.4 |
+| C1 | Next.js 15.5 (App Router) and tRPC 11 with TanStack Query | `src/trpc/`, `src/app/api/trpc/` |
+| C2 | `id` from `crypto.randomUUID()` and `dataCriacao` set by the server | `src/server/tasks/store.ts` |
+| C3 | Procedures `list`, `get`, `create`, `update` and `delete` (plus `complete` and `move`, section 2.2) | `src/server/tasks/router.ts` |
+| C4 | In-memory `Map` in the server process | `src/server/tasks/store.ts` |
+| C5 | The same Zod schema validates in the form and on the server | `src/server/tasks/schema.ts` |
+| C6 | `NOT_FOUND` for a missing `id`, `BAD_REQUEST` with the error for each field | `src/server/tasks/router.ts`, `src/server/trpc.ts` |
+| C7 | A Server Component fetches the first page and hands the hydrated cache to the client | `src/app/page.tsx` |
+| C8 | Confirmation in a dialog, then optimistic delete: the task leaves at once and comes back with a notice if the server refuses | `src/components/ConfirmDelete.tsx`, `src/components/TaskList.tsx` |
+| C9 | A single `TaskForm` to create and edit, with `useState` | `src/components/TaskForm.tsx` |
+| C10 | Submission blocked with an empty title, error shown under the field | `src/components/TaskForm.tsx` |
+| C11 | Buttons disabled while saving, floating success and error notices, empty and failure states | `src/components/Toasts.tsx`, `src/components/` |
+| C12 | `useInfiniteQuery` with cursor pagination and `IntersectionObserver` | `src/components/TaskList.tsx` |
+| C13 | Comments at the decision points, the README and this document | the whole repository |
+| C14 | Fictional sample tasks, no key or secret in the repository | section 6.4 |
 
-### 2.2 Além do enunciado
+### 2.2 Beyond the case
 
-| O quê | Por quê |
+| What | Why |
 |---|---|
-| Campos `concluida` e `dataConclusao`, e o procedimento `concluir` | É a ação mais comum numa lista de tarefas, e o horário registra quando ela aconteceu. O case pede "pelo menos" os quatro campos, então o modelo pode crescer |
-| Confirmação antes de excluir | Excluir não tem volta. Um clique errado no botão não pode apagar uma tarefa |
-| Ordem manual por arraste (`posicao` e `mover`) | Numa lista de tarefas, a ordem é a prioridade. Funciona com mouse, toque e teclado (seção 3.6) |
-| Avisos flutuantes | Ficam fixos no alto da janela. Um aviso no topo da lista não seria visto por quem está com a página rolada |
-| Volta ao mesmo ponto depois de editar | Quem edita uma tarefa lá embaixo não perde o lugar na lista |
-| Uma lista por visitante | O endereço é público. Com uma lista única, cada pessoa veria o que as anteriores escreveram (seção 3.3) |
-| Painel de boas-vindas e tarefas-roteiro | Quem abre a aplicação pela primeira vez aprende a usar sem ler documentação (seção 3.8) |
-| Tarefas de exemplo em toda sessão nova | A lista nunca abre vazia e a rolagem infinita tem o que carregar |
-| Design system próprio | Paleta e tipografia inspiradas na identidade da Artefact, em tokens (seção 3.9) |
-| Testes de unidade e de navegador | Vitest no router, Playwright no fluxo completo de criar, editar, excluir e rolar |
-| Publicação no Cloud Run | A aplicação no ar, com deploy automático a cada push na `main` |
-| Infraestrutura em Terraform | Todo recurso do Google Cloud descrito no repositório |
+| `concluida` and `dataConclusao` fields, and the `complete` procedure | The most common action on a task list, and the time records when it happened. The case asks for "at least" the four fields, so the model can grow |
+| Confirmation before deleting | Deleting cannot be undone. A misclick must not erase a task |
+| Manual order by dragging (`posicao` and `move`) | On a task list, order is priority. Works with mouse, touch and keyboard (section 3.6) |
+| Floating notices | Fixed to the top of the window. A notice at the top of the list would go unseen by someone scrolled down |
+| Back to the same spot after editing | Editing a task far down the list does not lose your place |
+| One list per visitor | The address is public. With a single list, each person would see what the previous ones wrote (section 3.3) |
+| Welcome panel and walkthrough tasks | A first-time visitor learns how to use the app without reading documentation (section 3.8) |
+| Sample tasks in every new session | The list never opens empty and the infinite scroll has something to load |
+| Own design system | Palette and typography inspired by Artefact's identity, as tokens (section 3.9) |
+| Unit and browser tests | Vitest on the router, Playwright on the full flow of creating, editing, deleting and scrolling |
+| Deployment to Cloud Run | The app is live, with an automatic deploy on every push to `main` |
+| Infrastructure as Terraform | Every Google Cloud resource described in the repository |
+| Protection against robots | Cloudflare in front, and the app rejects whatever skipped it (section 6.3) |
+
+### 2.3 Naming
+
+Code, comments and interface are in English. The task fields keep the
+Portuguese names the case specifies (`titulo`, `descricao`, `dataCriacao`),
+and the fields added beyond the case follow the same convention
+(`concluida`, `dataConclusao`, `posicao`) so the model reads uniformly.
+
+The Google Cloud resources (service `tarefas`, repository `servicos`, secret
+`segredo-origem`) were created before the translation and keep their IDs:
+renaming them would recreate the service and its domain certificate.
 
 ---
 
-## 3. Aplicação
+## 3. Application
 
 ### 3.1 Stack
 
-| Camada | Escolha |
+| Layer | Choice |
 |---|---|
 | Runtime | Node.js 22 LTS |
 | Framework | Next.js 15.5, App Router |
-| API | tRPC 11 com `@trpc/tanstack-react-query` |
-| Cache no cliente | TanStack Query 5 |
-| Validação | Zod 4 |
-| Estilo | Tailwind CSS 4 |
-| Testes | Vitest e Playwright |
+| API | tRPC 11 with `@trpc/tanstack-react-query` |
+| Client cache | TanStack Query 5 |
+| Validation | Zod 4 |
+| Styling | Tailwind CSS 4 |
+| Drag and drop | dnd-kit |
+| Tests | Vitest and Playwright |
 
-**Next.js 15, e não 16:** o case fixa a versão 15. A linha 15.5 segue
-recebendo correções.
+**Next.js 15, not 16:** the case pins version 15. The 15.5 line still
+receives fixes.
 
-### 3.2 Estrutura
+### 3.2 Structure
 
 ```
 src/
   server/
-    tarefas/schema.ts      schemas Zod e o tipo Tarefa
-    tarefas/store.ts       Map em memória, paginação por cursor, tarefas de exemplo
-    tarefas/router.ts      procedimentos tRPC
-    tarefas/exemplos.ts    as 30 tarefas fictícias de toda sessão nova
-    tarefas/router.test.ts testes de unidade
-    trpc.ts                inicialização do tRPC, sessão obrigatória e formatação de erros
-    contexto.ts            contexto das requisições HTTP (lê o cookie)
-    sessao.ts              nome do cookie, isolado para o middleware
-    root.ts                appRouter e o tipo AppRouter
+    tasks/schema.ts        Zod schemas and the Task type
+    tasks/store.ts         in-memory Map, cursor pagination, manual order
+    tasks/samples.ts       the 30 fictional tasks of every new session
+    tasks/router.ts        tRPC procedures
+    tasks/router.test.ts   unit tests
+    trpc.ts                tRPC setup, required session, change limit, error format
+    context.ts             context for HTTP requests (reads the cookie)
+    session.ts             cookie name, isolated for the middleware
+    protection.ts          origin check and rate limiter
+    root.ts                appRouter and the AppRouter type
   trpc/
-    client.tsx             provider do tRPC e do QueryClient no cliente
-    server.ts              chamadas e prefetch a partir de Server Components
-    query-client.ts        configuração do QueryClient, comum aos dois lados
+    client.tsx             tRPC and QueryClient provider in the browser
+    server.ts              calls and prefetch from Server Components
+    query-client.ts        QueryClient setup, shared by both sides
   lib/
-    constantes.ts          tamanho da página, igual no SSR e no cliente
-    formatar.ts            data em fuso fixo, igual no servidor e no navegador
+    constants.ts           page size, the same on the SSR and the client
+    format.ts              dates in a fixed time zone, identical on server and browser
   app/
-    api/trpc/[trpc]/route.ts     adaptador HTTP do tRPC
-    api/saude/route.ts           verificação de saúde do Cloud Run
-    page.tsx                     listagem
-    tarefas/nova/page.tsx        criação
-    tarefas/[id]/editar/page.tsx edição
+    api/trpc/[trpc]/route.ts   tRPC HTTP adapter
+    api/health/route.ts        health check for the deploy
+    page.tsx                   list
+    tasks/new/page.tsx         create
+    tasks/[id]/edit/page.tsx   edit
   components/
-    ListaTarefas.tsx
-    FormTarefa.tsx
-    Avisos.tsx             avisos flutuantes, disponíveis para qualquer componente
-    BoasVindas.tsx         painel da primeira visita
-    ConfirmarExclusao.tsx  diálogo "Você deseja excluir esta tarefa?"
-  middleware.ts            emite o cookie de sessão na primeira visita
+    TaskList.tsx
+    TaskForm.tsx
+    Toasts.tsx             floating notices, available to any component
+    Welcome.tsx            first-visit panel
+    ConfirmDelete.tsx      "Do you want to delete this task?" dialog
+  middleware.ts            origin check and session cookie on the first visit
 tests/
-  e2e/                     testes do Playwright
+  e2e/                     Playwright tests
   playwright.config.ts
-  vitest.config.ts         testes de unidade ficam em src/**/*.test.ts
+  vitest.config.ts         unit tests live in src/**/*.test.ts
 infra/
-  terraform/               recursos do Google Cloud
-  docker/                  Dockerfile e Dockerfile.dockerignore
-scripts/iniciar.mjs        sobe o build standalone localmente
+  terraform/               Google Cloud resources
+  docker/                  Dockerfile and Dockerfile.dockerignore
+scripts/start.mjs          starts the standalone build locally
 ```
 
-Não há `loading.tsx`. Com ele, o Next começa a enviar a página antes de ela
-terminar, e a edição de uma tarefa inexistente responderia com status 200 em
-vez de 404. A espera entre salvar o formulário e ver a lista já é indicada
-pelo botão "Salvando...".
+There is no `loading.tsx`. With it, Next starts streaming the page before it
+finishes, and editing a missing task would answer 200 instead of 404. The
+wait between saving the form and seeing the list is already shown by the
+"Saving..." button.
 
-### 3.3 Estado em memória e sessão
+### 3.3 In-memory state and sessions
 
-O store é um `Map<sessao, Map<id, Tarefa>>`, guardado em `globalThis` para
-sobreviver ao hot reload do `next dev`.
+The store is a `Map<session, Map<id, Task>>`, kept on `globalThis` to
+survive `next dev` hot reloads.
 
-Na primeira visita, o `middleware.ts` grava o cookie `sessao` com um UUID
-aleatório (`HttpOnly`, `SameSite=Lax`, `Secure` em produção). O contexto do
-tRPC lê esse cookie, e cada procedimento opera só na lista daquela sessão.
+On the first visit, `middleware.ts` sets the `session` cookie to a random
+UUID (`HttpOnly`, `SameSite=Lax`, `Secure` in production). The tRPC context
+reads that cookie, and every procedure works only on that session's list.
 
-O cookie foi escolhido, e não o `localStorage`, porque o servidor precisa
-das tarefas no momento do SSR. O `localStorage` só existe no navegador. O
-cookie chega ao servidor em toda requisição, inclusive na primeira.
+A cookie was chosen over `localStorage` because the server needs the tasks
+at SSR time. `localStorage` only exists in the browser. The cookie reaches
+the server on every request, including the first.
 
-**Limites:** até 500 sessões em memória (ao passar disso, sai a mais antiga),
-até 200 tarefas por sessão, título até 120 caracteres e descrição até 1000.
+**Limits:** up to 500 sessions in memory (past that, the least recently used
+one goes), up to 200 tasks per session, titles up to 120 characters and
+descriptions up to 1000.
 
-### 3.4 Modelo e procedimentos
+### 3.4 Model and procedures
 
 ```ts
-type Tarefa = {
-  id: string;          // crypto.randomUUID()
-  titulo: string;      // 1 a 120 caracteres, sem espaços nas pontas
-  descricao?: string;  // até 1000 caracteres
-  concluida: boolean;  // toda tarefa nasce pendente
-  dataConclusao?: string; // ISO 8601, gravado ao concluir e apagado ao reabrir
-  dataCriacao: string; // ISO 8601, definido pelo servidor
-  posicao: number;     // ordem manual: a menor aparece primeiro
+type Task = {
+  id: string;             // crypto.randomUUID()
+  titulo: string;         // 1 to 120 characters, trimmed
+  descricao?: string;     // up to 1000 characters
+  concluida: boolean;     // every task starts pending
+  dataConclusao?: string; // ISO 8601, set on completion and cleared on reopening
+  dataCriacao: string;    // ISO 8601, set by the server
+  posicao: number;        // manual order: lowest first
 };
 ```
 
-| Procedimento | Tipo | Entrada | Erros |
+| Procedure | Type | Input | Errors |
 |---|---|---|---|
-| `tarefas.listar` | query | `{ cursor?, limite }` | `BAD_REQUEST` |
-| `tarefas.obter` | query | `{ id }` | `NOT_FOUND` |
-| `tarefas.criar` | mutation | `{ titulo, descricao? }` | `BAD_REQUEST`, `TOO_MANY_REQUESTS` |
-| `tarefas.atualizar` | mutation | `{ id, titulo, descricao? }` | `BAD_REQUEST`, `NOT_FOUND` |
-| `tarefas.concluir` | mutation | `{ id, concluida }` | `NOT_FOUND` |
-| `tarefas.mover` | mutation | `{ id, depoisDe }` | `NOT_FOUND` |
-| `tarefas.remover` | mutation | `{ id }` | `NOT_FOUND` |
+| `tasks.list` | query | `{ cursor?, limit }` | `BAD_REQUEST` |
+| `tasks.get` | query | `{ id }` | `NOT_FOUND` |
+| `tasks.create` | mutation | `{ titulo, descricao? }` | `BAD_REQUEST`, `TOO_MANY_REQUESTS` |
+| `tasks.update` | mutation | `{ id, titulo, descricao? }` | `BAD_REQUEST`, `NOT_FOUND` |
+| `tasks.complete` | mutation | `{ id, concluida }` | `NOT_FOUND` |
+| `tasks.move` | mutation | `{ id, after }` | `NOT_FOUND` |
+| `tasks.delete` | mutation | `{ id }` | `NOT_FOUND` |
 
-`concluir` registra `dataConclusao` com o relógio do servidor. Marcar de novo
-uma tarefa já concluída mantém o horário original, e reabrir apaga o horário.
-Na tela, a conclusão é otimista com o horário do navegador, trocado pelo do
-servidor quando a resposta chega.
+Every mutation also answers `TOO_MANY_REQUESTS` past the change limit
+(section 6.3).
 
-`listar` devolve `{ itens, proximoCursor }` na ordem de `posicao`. O cursor
-é a posição e o `id` da última tarefa entregue. Com offset, excluir uma
-tarefa no meio da rolagem deslocaria a lista e a próxima página pularia um
-item. Com cursor, isso não acontece.
+`complete` records `dataConclusao` with the server clock. Completing an
+already completed task keeps the original time, and reopening clears it. On
+screen, completion is optimistic with the browser's time, replaced by the
+server's when the response arrives.
 
-### 3.5 Renderização
+`list` returns `{ items, nextCursor }` in `posicao` order. The cursor is the
+position and `id` of the last task delivered. With an offset, deleting a task
+mid-scroll would shift the list and the next page would skip an item. With a
+cursor, that does not happen.
 
-| Rota | Estratégia | Motivo |
+### 3.5 Rendering
+
+| Route | Strategy | Reason |
 |---|---|---|
-| `/` | SSR (`dynamic = 'force-dynamic'`) | Depende do cookie de cada visitante. Sem a flag, o Next poderia gerar a página no build |
-| `/tarefas/nova` | Estática | Não depende de dado nenhum |
-| `/tarefas/[id]/editar` | SSR | Busca a tarefa no servidor, e um `id` inexistente vira 404 antes de chegar ao cliente |
+| `/` | SSR (`dynamic = 'force-dynamic'`) | Depends on each visitor's cookie. Without the flag, Next could render the page at build time |
+| `/tasks/new` | Static | Depends on no data |
+| `/tasks/[id]/edit` | SSR | Loads the task on the server, and a missing `id` becomes a 404 before reaching the client |
 
-As datas são formatadas com fuso fixo (`America/Sao_Paulo`). O servidor roda
-em UTC e o navegador no fuso local; sem o fuso fixo, os dois gerariam textos
-diferentes e o React acusaria erro de hidratação.
+Dates are formatted in a fixed time zone (`America/Sao_Paulo`) and month
+names come from the code, not from the runtime's locale data. The server
+runs in UTC and the browser in local time; without this, both would produce
+different text and React would report a hydration error.
 
-**Fluxo da listagem:**
+**List flow:**
 
 ```
-requisição GET /
-   │  cookie sessao
+GET / request
+   │  session cookie
    ▼
-Server Component ── prefetchInfiniteQuery(tarefas.listar) ──► store (chamada direta, sem HTTP)
-   │  HTML com a primeira página + cache serializado
+Server Component ── prefetchInfiniteQuery(tasks.list) ──► store (direct call, no HTTP)
+   │  HTML with the first page + serialized cache
    ▼
-navegador ── HydrationBoundary ──► useInfiniteQuery começa do cache, sem buscar de novo
-   │  rolagem chega ao fim
+browser ── HydrationBoundary ──► useInfiniteQuery starts from the cache, no refetch
+   │  scroll reaches the end
    ▼
-IntersectionObserver ──► GET /api/trpc/tarefas.listar?cursor=...
+IntersectionObserver ──► GET /api/trpc/tasks.list?cursor=...
 ```
 
-### 3.6 Ordem manual
+### 3.6 Manual order
 
-Cada tarefa tem uma `posicao` numérica, e a lista é ordenada por ela. Tarefa
-nova recebe uma posição antes da primeira e entra no topo.
+Each task has a numeric `posicao`, and the list is sorted by it. A new task
+gets a position before the first one and goes to the top.
 
-`mover({ id, depoisDe })` coloca a tarefa logo abaixo de `depoisDe`, ou no
-topo com `null`. A posição nova é o ponto médio entre as duas vizinhas, então
-só a tarefa movida muda. Quando as vizinhas ficam próximas demais para caber
-um número entre elas (menos de 10⁻⁹), a lista inteira é renumerada.
+`move({ id, after })` places the task right below `after`, or at the top with
+`null`. The new position is the midpoint between the two neighbours, so only
+the moved task changes. When the neighbours get too close for a number to fit
+between them (less than 10⁻⁹), the whole list is renumbered.
 
-Na tela, o arraste usa o dnd-kit:
+On screen, dragging uses dnd-kit:
 
-1. **Puxador** de seis pontos à esquerda de cada tarefa. Só ele inicia o
-   arraste, para o checkbox, os links e a rolagem no celular continuarem
-   funcionando normalmente.
-2. **Mouse e toque** começam depois de 5px de movimento, para um clique no
-   puxador não virar arraste.
-3. **Teclado:** foco no puxador, espaço pega, setas movem, espaço solta, Esc
-   cancela. Os anúncios para leitor de tela estão em português.
-4. **Otimista:** a tarefa fica onde foi solta, e a lista é recarregada depois
-   da resposta do servidor. Se ele recusar, a ordem anterior volta, com aviso.
+1. **A six-dot handle** on the left of each task. Only it starts a drag, so
+   the checkbox, the links and scrolling on a phone keep working normally.
+2. **Mouse and touch** start after 5px of movement, so a click on the handle
+   does not become a drag.
+3. **Keyboard:** focus the handle, space picks up, arrows move, space drops,
+   Esc cancels. Screen reader announcements are customized.
+4. **Optimistic:** the task stays where it was dropped, and the list reloads
+   after the server responds. If it refuses, the previous order comes back,
+   with a notice.
 
-### 3.7 Confirmação de exclusão
+### 3.7 Delete confirmation
 
-O botão Excluir abre um diálogo: "Você deseja excluir esta tarefa?", com o
-título da tarefa e os botões Cancelar e Excluir. É o `<dialog>` nativo, aberto
-com `showModal()`: o navegador prende o foco dentro dele, fecha com Esc, deixa
-o resto da página inerte e devolve o foco ao botão de origem. O foco começa
-em Cancelar, a opção que não destrói nada. Só a confirmação dispara o
-procedimento `remover`.
+The Delete button opens a dialog: "Do you want to delete this task?", with the
+task title and the Cancel and Delete buttons. It is the native `<dialog>`,
+opened with `showModal()`: the browser traps focus inside it, closes it on
+Esc, makes the rest of the page inert and returns focus to the button that
+opened it. Focus starts on Cancel, the option that destroys nothing. Only the
+confirmation calls the `delete` procedure.
 
-### 3.8 Primeira visita
+### 3.8 First visit
 
-Na primeira visita, a listagem abre com um painel de boas-vindas que explica
-em seis passos como concluir, criar, editar, excluir, reordenar e rolar. Ao fechar, um
-cookie `boas-vindas` registra que ele foi visto. Quem decide mostrar o painel
-é o servidor, lendo esse cookie no SSR, então a página já chega com ou sem
-ele e nada pisca na tela. O link "Como usar" do cabeçalho abre a listagem com
-`?ajuda=1`, e o painel volta.
+On the first visit, the list opens with a welcome panel that explains in six
+steps how to complete, create, edit, delete, reorder and scroll. When closed,
+a `welcome` cookie records that it was seen. The server decides whether to
+show the panel, by reading that cookie during SSR, so the page arrives with
+or without it and nothing flickers. The "How to use" link in the header opens
+the list with `?help=1`, and the panel comes back.
 
-As seis primeiras tarefas de exemplo repetem o roteiro na prática: cada uma
-pede uma ação ("Marque esta tarefa como concluída", "Edite esta tarefa") e
-diz o que observar.
+The first six sample tasks repeat the walkthrough in practice: each one asks
+for an action ("Mark this task as completed", "Edit this task") and says what
+to look for.
 
 ### 3.9 Design system
 
-Tokens do Tailwind 4, declarados em `@theme` no `src/app/globals.css`.
-Nenhum componente usa cor fora deles.
+Tailwind 4 tokens, declared in `@theme` in `src/app/globals.css`. No
+component uses a colour outside them.
 
-| Token | Valor | Uso |
+| Token | Value | Use |
 |---|---|---|
-| `marinho` | `#002244` | Cabeçalho, texto principal, painel |
-| `marinho-profundo` | `#00162e` | Fundo no modo escuro |
-| `marinho-superficie` | `#0a2e55` | Cartões no modo escuro |
-| `magenta` | `#ff0066` | Ponto final dos títulos, borda de tarefa pendente |
-| `magenta-forte` | `#e0005c` | Botões e links |
-| `magenta-claro` | `#ff5c9d` | Links no modo escuro |
-| `turquesa` | `#65cccc` | Tarefa concluída, números do painel |
-| `turquesa-escuro` | `#2ab6bf` | Contorno de foco, borda do aviso de sucesso |
-| `nevoa` | `#f0f0f0` | Fundo no modo claro |
-| `erro` | `#c4231a` | Mensagens de erro, botão de confirmar exclusão |
+| `navy` | `#002244` | Header, main text, welcome panel |
+| `navy-deep` | `#00162e` | Background in dark mode |
+| `navy-surface` | `#0a2e55` | Cards in dark mode |
+| `magenta` | `#ff0066` | Full stop of titles, border of pending tasks |
+| `magenta-strong` | `#e0005c` | Buttons and links |
+| `magenta-light` | `#ff5c9d` | Links in dark mode |
+| `teal` | `#65cccc` | Completed tasks, panel numbers |
+| `teal-dark` | `#2ab6bf` | Focus outline, success notice border |
+| `mist` | `#f0f0f0` | Background in light mode |
+| `error` | `#c4231a` | Error messages, delete confirmation button |
 
-**Tipografia:** Roboto (300, 400, 500 e 700), servida pelo próprio app com
-`next/font`. Títulos em peso 300.
+**Typography:** Roboto (300, 400, 500 and 700), served by the app itself with
+`next/font`. Titles in weight 300.
 
-**Contraste:** o magenta da marca com texto branco fica em 3,9:1, abaixo dos
-4,5:1 exigidos para texto pequeno. Botões e links usam o `magenta-forte`
-(4,9:1), e o magenta puro fica para detalhes decorativos.
+**Contrast:** the brand magenta with white text is 3.9:1, below the 4.5:1
+required for small text. Buttons and links use `magenta-strong` (4.9:1), and
+pure magenta is kept for decorative details.
 
-**Componentes** (`@layer components`): `titulo-pagina` (com o ponto final em
-magenta), `botao-primario`, `botao-perigo`, `botao-secundario`, `link-acao`, `cartao`,
-`campo`, `texto-suave` e `lambda`, o triângulo com brilho magenta desenhado
-em CSS.
+**Components** (`@layer components`): `page-title` (with the magenta full
+stop), `btn-primary`, `btn-danger`, `btn-secondary`, `action-link`, `card`,
+`field`, `text-muted` and `lambda`, the triangle with a magenta glow drawn in
+CSS.
 
-**Marca:** a interface usa a paleta e a tipografia, mas não o logotipo nem o
-nome da empresa como marca do produto.
+**Brand:** the interface uses the palette and typography, but not the
+company's logo or name as the product's brand.
 
-**Modo escuro** automático, pela preferência do sistema.
+**Dark mode** is automatic, following the system preference.
 
 ---
 
-## 4. Infraestrutura
+## 4. Infrastructure
 
-### 4.1 Visão geral
+### 4.1 Overview
 
 ```
-push na main (guistreahl/artefact-case)
+push to main (guistreahl/artefact-case)
    │
    ▼
 GitHub Actions ──OIDC──► Workload Identity Federation
-   │                         aceita só este repositório, na branch main
+   │                         accepts only this repository, on main
    │                         ▼
-   │                     service account "deploy"
+   │                     "deploy" service account
    ▼
 docker build ──► Artifact Registry   servicos/tarefas:<sha>
                          │
                          ▼
                  Cloud Run "tarefas" (us-central1)
-                 identidade "tarefas-run", sem papel nenhum
+                 runtime identity "tarefas-run"
                          ▲
-Cloudflare (proxy): desafio para robôs, limite por IP, cabeçalho secreto
-   ▼
-DNS: CNAME gerenciador ► ghs.googlehosted.com + domain mapping do Cloud Run
+Cloudflare (proxy): robot challenge, per-IP limit, secret header
+   ▲
+DNS: CNAME gerenciador ► ghs.googlehosted.com + Cloud Run domain mapping
 ```
 
-### 4.2 Recursos
+### 4.2 Resources
 
-Todos descritos em Terraform, em `infra/terraform/`.
+All described in Terraform, in `infra/terraform/`.
 
-| Recurso | Configuração |
+| Resource | Configuration |
 |---|---|
 | APIs | Cloud Run, Artifact Registry, IAM, IAM Credentials, STS, Secret Manager |
-| Artifact Registry | Repositório Docker `servicos`, mantém as 10 imagens mais recentes |
-| SA `deploy` | Publica imagens no repositório e revisões no serviço. Nada além disso |
-| SA `tarefas-run` | Identidade do container. Só lê o segredo de origem |
-| Secret Manager | `segredo-origem`, gerado pelo Terraform (seção 6.3) |
-| Workload Identity | Pool e provider para o emissor OIDC do GitHub |
-| Cloud Run `tarefas` | Máximo de 1 instância, mínimo de 0, 512 MiB, 1 vCPU, acesso público |
+| Artifact Registry | Docker repository `servicos`, keeps the 10 most recent images |
+| `deploy` service account | Pushes images to the repository and revisions to the service. Nothing else |
+| `tarefas-run` service account | The container's identity. Only reads the origin secret |
+| Secret Manager | `segredo-origem`, generated by Terraform (section 6.3) |
+| Workload Identity | Pool and provider for GitHub's OIDC issuer |
+| Cloud Run `tarefas` | At most 1 instance, at least 0, 512 MiB, 1 vCPU, public access, TCP startup probe |
 | Domain mapping | `gerenciador.guistreahl.com.br` |
 
-O projeto e o faturamento ficam fora do Terraform, porque dependem da conta
-de faturamento. O estado do Terraform fica num bucket GCS com versionamento.
-O provider do Google é travado em `~> 8.4`, com o `.terraform.lock.hcl`
-versionado para Linux, Windows e macOS.
+The project and its billing stay outside Terraform, because they depend on
+the billing account. The Terraform state lives in a versioned GCS bucket. The
+Google provider is pinned to `~> 8.4`, with `.terraform.lock.hcl` committed
+for Linux, Windows and macOS.
 
-**A imagem pertence à esteira, não ao Terraform.** O serviço é criado com
-uma imagem provisória, e o Terraform ignora mudanças de imagem e de tráfego.
-Sem isso, cada `terraform apply` desfaria o último deploy.
+**The image belongs to the pipeline, not to Terraform.** The service is
+created with a placeholder image, and Terraform ignores image and traffic
+changes. Without that, every `terraform apply` would undo the last deploy.
 
-### 4.3 Uma instância só
+### 4.3 A single instance
 
-Cada instância do Cloud Run tem a sua própria memória. Com duas, uma tarefa
-criada numa instância não apareceria para uma requisição atendida pela
-outra. Por isso o serviço roda com no máximo uma instância, que atende até
-80 requisições simultâneas.
+Each Cloud Run instance has its own memory. With two, a task created on one
+instance would not show up for a request served by the other. So the
+service runs at most one instance, which handles up to 80 concurrent
+requests.
 
-Com mínimo de zero, o Cloud Run desliga a instância depois de alguns minutos
-sem acesso, e a memória vai junto. A próxima visita encontra a lista
-reiniciada com as tarefas de exemplo. O case dispensa persistência, e isso é
-comportamento esperado.
+With a minimum of zero, Cloud Run shuts the instance down after a few
+minutes without traffic, and the memory goes with it. The next visit finds
+the list reset to the sample tasks. The case does not require persistence,
+and this is expected behaviour.
 
-### 4.4 Imagem
+### 4.4 Image
 
-`infra/docker/Dockerfile`, em três estágios (dependências, build, execução) sobre
-`node:22-alpine`, com o `output: 'standalone'` do Next. A imagem final roda
-com usuário sem privilégio e escuta na porta recebida em `PORT`.
+`infra/docker/Dockerfile`, in three stages (deps, build, runtime) on
+`node:22-alpine`, using Next's `output: 'standalone'`. The final image runs
+as an unprivileged user and listens on the port given in `PORT`.
 
-O `npm start` sobe esse mesmo servidor standalone, então os testes de
-navegador do CI rodam contra o que vai para a imagem.
+`npm start` runs that same standalone server, so the CI browser tests run
+against what goes into the image.
 
 ---
 
-## 5. Esteira
+## 5. Pipeline
 
-### `ci.yml`: todo pull request e todo push
+### `ci.yml`: every pull request and every push
 
-Três jobs em paralelo:
+Three jobs in parallel:
 
-| Job | O que faz |
+| Job | What it does |
 |---|---|
-| `verificar` | `npm ci`, lint, tipos, Vitest, `next build` e Playwright contra o build |
-| `imagem` | Monta a imagem Docker, sobe um container e espera `/api/saude` responder |
-| `infra` | `terraform fmt`, `init` sem backend e `validate` |
+| `verify` | `npm ci`, lint, types, Vitest, `next build` and Playwright against the build |
+| `image` | Builds the Docker image, starts a container and waits for `/api/health` |
+| `infra` | `terraform fmt`, `init` without backend and `validate` |
 
-### `deploy.yml`: push na `main`
+### `deploy.yml`: push to `main`, after CI passes
 
-Roda em fila, sem cancelamento, para que o deploy de um commit antigo nunca
-termine depois do de um commit mais novo.
+Runs queued, without cancelling, so the deploy of an older commit never
+finishes after that of a newer one.
 
-1. Autentica no Google pelo Workload Identity
-2. Monta a imagem e publica com a tag do commit
-3. Cria a revisão nova **sem tráfego**, com uma URL própria
-4. Lê o segredo de origem no Secret Manager e roda o Playwright contra essa
-   URL, enviando o cabeçalho
-5. Passa 100% do tráfego para a revisão nova
-6. Confere `/api/saude` na URL do serviço e, sem bloquear, no domínio
+1. Authenticates to Google through Workload Identity
+2. Builds the image and publishes it tagged with the commit
+3. Creates the new revision **with no traffic**, on its own URL
+4. Reads the origin secret from Secret Manager and runs Playwright against
+   that URL, sending the header
+5. Moves 100% of the traffic to the new revision
+6. Checks `/api/health` on the service URL and, without blocking, the domain
 
-Se o passo 4 falhar, o serviço continua na revisão anterior.
+If step 4 fails, the service stays on the previous revision.
 
 ---
 
-## 6. Segurança
+## 6. Security
 
-### 6.1 Sem chave de service account
+### 6.1 No service account key
 
-O GitHub prova por OIDC que a execução veio deste repositório, e o Google
-devolve uma credencial de vida curta. Não existe chave para guardar nem para
-vazar.
+GitHub proves via OIDC that the run came from this repository, and Google
+returns a short-lived credential. There is no key to store or to leak.
 
-### 6.2 Condição do Workload Identity
+### 6.2 Workload Identity condition
 
 ```
 assertion.repository == 'guistreahl/artefact-case' &&
 assertion.ref == 'refs/heads/main'
 ```
 
-A condição por repositório impede que outro repositório use esta identidade.
-A condição por branch impede que um pull request obtenha credencial. O CI de
-pull request não precisa do Google.
+The repository condition stops any other repository from using this
+identity. The branch condition stops a pull request from getting a
+credential. Pull request CI does not need Google at all.
 
-As três referências que o deploy usa (projeto, provider e service account)
-ficam em Variables do GitHub. Sozinhas, não dão acesso a nada.
+The three references the deploy uses (project, provider and service
+account) are GitHub Variables. On their own they grant access to nothing.
 
-### 6.3 Proteção contra robôs e ataques comuns
+### 6.3 Protection against robots and common attacks
 
-A aplicação só deve ser usada por pessoas. São três camadas, da borda para
-dentro:
+The app is meant to be used by people only. There are three layers, from the
+edge inwards:
 
-**1. Cloudflare, com o proxy ligado no registro `gerenciador`**
+**1. Cloudflare, with the proxy on for the `gerenciador` record**
 
-| Configuração | Efeito |
+| Setting | Effect |
 |---|---|
-| Regra personalizada: `http.host eq "gerenciador.guistreahl.com.br"` → *Managed Challenge* | Todo visitante passa pelo desafio do Cloudflare, quase sempre sem interação. Robôs param aqui |
-| Bot Fight Mode | Bloqueia robôs conhecidos antes da regra acima |
-| Rate limiting: `/api/trpc`, 100 requisições em 10 s por IP → bloqueio | Contém rajadas contra a API |
-| Transform Rule: acrescenta `x-origem-cloudflare: <segredo>` | Prova, para a aplicação, que a requisição passou pelo Cloudflare |
-| SSL *Full (strict)*, *Always Use HTTPS*, TLS mínimo 1.2 | Tráfego cifrado de ponta a ponta, com o certificado do Google validado |
+| Custom rule: `http.host eq "gerenciador.guistreahl.com.br"` → *Managed Challenge* | Every visitor goes through Cloudflare's challenge, almost always without interaction. Robots stop here |
+| Bot Fight Mode | Blocks known robots before the rule above |
+| Rate limiting: `/api/trpc`, 100 requests in 10 s per IP → block | Contains bursts against the API |
+| Transform Rule: adds `x-origin-secret: <secret>` | Proves to the app that the request went through Cloudflare |
+| SSL *Full (strict)*, *Always Use HTTPS*, minimum TLS 1.2 | End-to-end encryption, with Google's certificate validated |
 
-O proxy só é ligado depois que o Google emite o certificado do domínio: com
-ele ligado desde o início, a validação do Google não chega ao Cloud Run.
+The proxy is only turned on after Google issues the domain certificate: with
+it on from the start, Google's validation does not reach Cloud Run.
 
-**2. Trava na origem**
+**2. Origin lock**
 
-O Cloud Run continua acessível pelo endereço `run.app` e pelos IPs do Google,
-e um robô poderia chegar por ali sem passar pelo Cloudflare. Por isso o
-`middleware.ts` recusa com 403 toda requisição sem o cabeçalho
-`x-origem-cloudflare` com o valor certo, comparado em tempo constante.
+Cloud Run is still reachable through its `run.app` address and Google's IPs,
+and a robot could get in there without going through Cloudflare. So
+`middleware.ts` rejects with 403 every request without the `x-origin-secret`
+header holding the right value, compared in constant time.
 
-O segredo é gerado pelo Terraform (`random_password`), guardado no Secret
-Manager e entregue ao container como variável de ambiente. Não está no
-repositório. Sem a variável (desenvolvimento, testes, quem roda localmente), a
-trava fica desligada. Só `/api/saude` fica de fora, porque a sonda do Cloud
-Run não passa pelo Cloudflare, e ela não devolve dado nenhum.
+The secret is generated by Terraform (`random_password`), stored in Secret
+Manager and handed to the container as an environment variable. It is not in
+the repository. Without the variable (development, tests, anyone running the
+project locally), the lock is off. Only `/api/health` is left out, and it
+returns no data.
 
-**3. Na aplicação**
+**3. In the app**
 
-1. Até 60 alterações por minuto por IP (`TOO_MANY_REQUESTS` depois disso). O
-   contador fica em memória, o que funciona porque o serviço tem uma
-   instância só.
-2. Limites de tamanho nos campos e de tarefas por sessão (seção 3.3).
-3. `robots.txt` com `Disallow: /`, cabeçalho `X-Robots-Tag: noindex` e HSTS.
+1. Up to 60 changes per minute per IP (`TOO_MANY_REQUESTS` past that). The
+   counter lives in memory, which works because the service has a single
+   instance.
+2. Field size limits and a task limit per session (section 3.3).
+3. `robots.txt` with `Disallow: /`, the `X-Robots-Tag: noindex` header and
+   HSTS.
 
-### 6.4 Repositório público
+### 6.4 Public repository
 
-Nenhum segredo, nenhum dado pessoal, nenhum arquivo de estado do Terraform.
-Todas as tarefas de exemplo são fictícias.
+No secrets, no personal data, no Terraform state files. Every sample task is
+fictional.

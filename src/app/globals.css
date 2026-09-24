@@ -3,44 +3,44 @@
 /*
  * Design system
  *
- * Paleta e tipografia inspiradas na identidade da Artefact (marinho, magenta,
- * turquesa e Roboto), sem logo nem nome da marca. Toda cor da interface sai
- * destes tokens; nenhum componente usa hexadecimal solto.
+ * Palette and typography inspired by Artefact's visual identity (navy,
+ * magenta, teal and Roboto), without the logo or the brand name. Every colour
+ * in the interface comes from these tokens; no component uses a raw hex.
  *
- * Contraste: o magenta da marca (#FF0066) com texto branco fica em 3,9:1,
- * abaixo do mínimo de 4,5:1 para texto pequeno. Botões e links usam o
- * magenta-forte (4,9:1), e o magenta puro fica para detalhes decorativos e
- * textos grandes. O turquesa não é usado como cor de texto sobre fundo claro.
+ * Contrast: the brand magenta (#FF0066) with white text is 3.9:1, below the
+ * 4.5:1 minimum for small text. Buttons and links use magenta-strong (4.9:1),
+ * and pure magenta is kept for decorative details and large text. Teal is
+ * never used as a text colour on a light background.
  */
 @theme {
   --font-sans: var(--font-roboto), ui-sans-serif, system-ui, sans-serif;
 
-  --color-marinho: #002244;
-  --color-marinho-profundo: #00162e;
-  --color-marinho-superficie: #0a2e55;
-  --color-marinho-borda: #1d4470;
+  --color-navy: #002244;
+  --color-navy-deep: #00162e;
+  --color-navy-surface: #0a2e55;
+  --color-navy-border: #1d4470;
 
   --color-magenta: #ff0066;
-  --color-magenta-forte: #e0005c;
-  --color-magenta-escuro: #b8004b;
-  --color-magenta-claro: #ff5c9d;
+  --color-magenta-strong: #e0005c;
+  --color-magenta-dark: #b8004b;
+  --color-magenta-light: #ff5c9d;
 
-  --color-turquesa: #65cccc;
-  --color-turquesa-escuro: #2ab6bf;
-  --color-turquesa-fundo: #e8f7f7;
+  --color-teal: #65cccc;
+  --color-teal-dark: #2ab6bf;
+  --color-teal-bg: #e8f7f7;
 
-  --color-azul: #024189;
+  --color-blue: #024189;
 
-  --color-nevoa: #f0f0f0;
-  --color-nevoa-borda: #dcdfe3;
-  --color-grafite: #4a5a6a;
+  --color-mist: #f0f0f0;
+  --color-mist-border: #dcdfe3;
+  --color-graphite: #4a5a6a;
 
-  --color-erro: #c4231a;
-  --color-erro-fundo: #fdeceb;
-  --color-erro-claro: #ff7b72;
+  --color-error: #c4231a;
+  --color-error-bg: #fdeceb;
+  --color-error-light: #ff7b72;
 
-  --animate-surgir: surgir 180ms ease-out;
-  @keyframes surgir {
+  --animate-appear: appear 180ms ease-out;
+  @keyframes appear {
     from {
       opacity: 0;
       transform: translateY(-0.75rem);
@@ -54,59 +54,59 @@
   }
 
   body {
-    @apply bg-nevoa font-sans text-marinho antialiased dark:bg-marinho-profundo dark:text-white;
+    @apply bg-mist font-sans text-navy antialiased dark:bg-navy-deep dark:text-white;
   }
 
   :focus-visible {
-    @apply outline-2 outline-offset-2 outline-turquesa-escuro;
+    @apply outline-2 outline-offset-2 outline-teal-dark;
   }
 }
 
 @layer components {
-  /* O ponto final em magenta dos títulos, como nos slides. */
-  .titulo-pagina {
+  /* The magenta full stop at the end of titles, as in the slides. */
+  .page-title {
     @apply text-3xl font-light tracking-tight sm:text-4xl;
   }
-  .titulo-pagina::after {
+  .page-title::after {
     content: ".";
     @apply text-magenta;
   }
 
-  .botao-primario {
-    @apply inline-flex items-center justify-center rounded bg-magenta-forte px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-magenta-escuro disabled:cursor-not-allowed disabled:opacity-60;
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded bg-magenta-strong px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-magenta-dark disabled:cursor-not-allowed disabled:opacity-60;
   }
 
-  /* Contraste do branco sobre o vermelho de erro: 5,8:1. */
-  .botao-perigo {
-    @apply inline-flex items-center justify-center rounded bg-erro px-4 py-2 text-sm font-medium text-white transition hover:brightness-90;
+  /* White on the error red: 5.8:1 contrast. */
+  .btn-danger {
+    @apply inline-flex items-center justify-center rounded bg-error px-4 py-2 text-sm font-medium text-white transition hover:brightness-90;
   }
 
-  .botao-secundario {
-    @apply inline-flex items-center justify-center rounded px-4 py-2 text-sm font-medium text-marinho transition-colors hover:bg-nevoa-borda/60 dark:text-white dark:hover:bg-marinho-superficie;
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded px-4 py-2 text-sm font-medium text-navy transition-colors hover:bg-mist-border/60 dark:text-white dark:hover:bg-navy-surface;
   }
 
-  .link-acao {
-    @apply rounded px-2 py-1 text-sm font-medium text-magenta-forte transition-colors hover:bg-magenta/10 dark:text-magenta-claro;
+  .action-link {
+    @apply rounded px-2 py-1 text-sm font-medium text-magenta-strong transition-colors hover:bg-magenta/10 dark:text-magenta-light;
   }
 
-  .cartao {
-    @apply rounded border border-nevoa-borda bg-white shadow-sm dark:border-marinho-borda dark:bg-marinho-superficie;
+  .card {
+    @apply rounded border border-mist-border bg-white shadow-sm dark:border-navy-border dark:bg-navy-surface;
   }
 
-  .campo {
-    @apply block w-full rounded border border-nevoa-borda bg-white px-3 py-2 text-marinho shadow-sm placeholder:text-grafite/60 dark:border-marinho-borda dark:bg-marinho-superficie dark:text-white;
+  .field {
+    @apply block w-full rounded border border-mist-border bg-white px-3 py-2 text-navy shadow-sm placeholder:text-graphite/60 dark:border-navy-border dark:bg-navy-surface dark:text-white;
   }
-  .campo[aria-invalid="true"] {
-    @apply border-erro dark:border-erro-claro;
+  .field[aria-invalid="true"] {
+    @apply border-error dark:border-error-light;
   }
 
-  .texto-suave {
-    @apply text-grafite dark:text-white/70;
+  .text-muted {
+    @apply text-graphite dark:text-white/70;
   }
 
   /*
-   * O triângulo "Λ" com brilho magenta, desenhado só com CSS. É o gesto
-   * visual que se repete nos slides, sem reproduzir o logotipo.
+   * The "Λ" triangle with a magenta glow, drawn with CSS only. It is the
+   * visual gesture repeated across the slides, without reproducing the logo.
    */
   .lambda {
     @apply pointer-events-none absolute aspect-[1/1.15];

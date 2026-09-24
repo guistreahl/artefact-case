@@ -1,16 +1,16 @@
 {
-  "name": "case-artefact-tarefas",
+  "name": "artefact-case-tasks",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Gerenciador de tarefas em Next.js 15 com tRPC",
+  "description": "Task manager built with Next.js 15 and tRPC",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "node scripts/iniciar.mjs",
+    "start": "node scripts/start.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --config tests/vitest.config.ts",

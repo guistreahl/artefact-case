@@ -1,38 +1,35 @@
 import { cookies } from "next/headers";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
-import { BoasVindas } from "@/components/BoasVindas";
-import { ListaTarefas } from "@/components/ListaTarefas";
-import { COOKIE_BOAS_VINDAS, TAMANHO_PAGINA } from "@/lib/constantes";
+import { TaskList } from "@/components/TaskList";
+import { Welcome } from "@/components/Welcome";
+import { PAGE_SIZE, WELCOME_COOKIE } from "@/lib/constants";
 import { getQueryClient, trpc } from "@/trpc/server";
 
-// A lista depende do cookie de cada visitante. Sem esta linha, o Next poderia
-// tentar gerar a página uma vez só, no build.
+// The list depends on each visitor's cookie. Without this line, Next could
+// try to render the page only once, at build time.
 export const dynamic = "force-dynamic";
 
-type Props = { searchParams: Promise<{ ajuda?: string }> };
+type Props = { searchParams: Promise<{ help?: string }> };
 
-export default async function PaginaListagem({ searchParams }: Props) {
-  const { ajuda } = await searchParams;
-  const jaViuBoasVindas = (await cookies()).has(COOKIE_BOAS_VINDAS);
-  const veioDoMenu = ajuda === "1";
+export default async function ListPage({ searchParams }: Props) {
+  const { help } = await searchParams;
+  const welcomeSeen = (await cookies()).has(WELCOME_COOKIE);
+  const fromMenu = help === "1";
 
-  // SSR: a primeira página é buscada aqui, no servidor, e vai no HTML. O
-  // HydrationBoundary entrega o mesmo dado ao cache do cliente, que continua
-  // a rolagem a partir dele sem repetir a busca.
+  // SSR: the first page is fetched here, on the server, and goes out in the
+  // HTML. HydrationBoundary hands the same data to the client cache, which
+  // continues the scroll from it without fetching again.
   const queryClient = getQueryClient();
   await queryClient.prefetchInfiniteQuery(
-    trpc.tarefas.listar.infiniteQueryOptions(
-      { limite: TAMANHO_PAGINA },
-      { getNextPageParam: (pagina) => pagina.proximoCursor },
-    ),
+    trpc.tasks.list.infiniteQueryOptions({ limit: PAGE_SIZE }, { getNextPageParam: (page) => page.nextCursor }),
   );
 
   return (
     <>
-      {(!jaViuBoasVindas || veioDoMenu) && <BoasVindas veioDoMenu={veioDoMenu} />}
-      <h1 className="titulo-pagina mb-6">Suas tarefas</h1>
+      {(!welcomeSeen || fromMenu) && <Welcome fromMenu={fromMenu} />}
+      <h1 className="page-title mb-6">Your tasks</h1>
       <HydrationBoundary state={dehydrate(queryClient)}>
-        <ListaTarefas />
+        <TaskList />
       </HydrationBoundary>
     </>
   );

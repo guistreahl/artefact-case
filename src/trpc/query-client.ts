@@ -1,11 +1,11 @@
 import { QueryClient } from "@tanstack/react-query";
 
-export function criarQueryClient() {
+export function createQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        // Com o dado recém-chegado do SSR, o cliente não repete a busca ao
-        // hidratar a página.
+        // With fresh data from the SSR, the client does not fetch again when
+        // hydrating the page.
         staleTime: 30 * 1000,
         retry: 1,
       },

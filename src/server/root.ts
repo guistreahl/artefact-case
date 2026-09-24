@@ -1,11 +1,11 @@
-import { criarCaller, criarRouter } from "./trpc";
-import { tarefasRouter } from "./tarefas/router";
+import { createCallerFactory, createRouter } from "./trpc";
+import { tasksRouter } from "./tasks/router";
 
-export const appRouter = criarRouter({
-  tarefas: tarefasRouter,
+export const appRouter = createRouter({
+  tasks: tasksRouter,
 });
 
-/** O único tipo que o frontend importa do servidor. Nenhum código vai junto. */
+/** The only thing the frontend imports from the server: a type, no code. */
 export type AppRouter = typeof appRouter;
 
-export const createCaller = criarCaller(appRouter);
+export const createCaller = createCallerFactory(appRouter);

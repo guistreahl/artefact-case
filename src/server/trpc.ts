@@ -1,60 +1,60 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import { z, ZodError } from "zod";
-import type { RepositorioTarefas } from "./tarefas/store";
-import type { LimitadorDeTaxa } from "./protecao";
+import type { TaskStore } from "./tasks/store";
+import type { RateLimiter } from "./protection";
 
-export { COOKIE_SESSAO } from "./sessao";
+export { SESSION_COOKIE } from "./session";
 
-export type Contexto = {
-  /** Id anônimo do visitante, vindo do cookie emitido pelo middleware. */
-  sessao: string | undefined;
-  repositorio: RepositorioTarefas;
-  /** Limita as alterações por visitante. Ausente nas chamadas internas do SSR. */
-  limitador?: LimitadorDeTaxa;
+export type Context = {
+  /** Anonymous visitor id, from the cookie the middleware issues. */
+  session: string | undefined;
+  store: TaskStore;
+  /** Limits changes per visitor. Absent in the SSR's internal calls. */
+  limiter?: RateLimiter;
   ip?: string;
 };
 
-const t = initTRPC.context<Contexto>().create({
-  // Erros de validação chegam ao cliente já separados por campo, para o
-  // formulário mostrar cada mensagem embaixo do campo certo.
+const t = initTRPC.context<Context>().create({
+  // Validation errors reach the client already split by field, so the form
+  // shows each message under the right field.
   errorFormatter({ shape, error }) {
     return {
       ...shape,
       data: {
         ...shape.data,
-        erroValidacao: error.cause instanceof ZodError ? z.flattenError(error.cause) : null,
+        validation: error.cause instanceof ZodError ? z.flattenError(error.cause) : null,
       },
     };
   },
 });
 
-export const criarRouter = t.router;
-export const criarCaller = t.createCallerFactory;
+export const createRouter = t.router;
+export const createCallerFactory = t.createCallerFactory;
 
 /**
- * Todo procedimento exige uma sessão. O middleware garante o cookie em
- * qualquer requisição que passe pelo Next, então a falta dele só acontece se
- * alguém chamar a API bloqueando cookies.
+ * Every procedure requires a session. The middleware guarantees the cookie on
+ * any request that goes through Next, so it can only be missing if someone
+ * calls the API with cookies blocked.
  */
-export const procedimento = t.procedure.use(({ ctx, next }) => {
-  if (!ctx.sessao) {
+export const procedure = t.procedure.use(({ ctx, next }) => {
+  if (!ctx.session) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
-      message: "Sessão não encontrada. Ative os cookies e recarregue a página.",
+      message: "Session not found. Enable cookies and reload the page.",
     });
   }
-  return next({ ctx: { ...ctx, sessao: ctx.sessao } });
+  return next({ ctx: { ...ctx, session: ctx.session } });
 });
 
 /**
- * Procedimentos que alteram dados: além da sessão, passam pelo limite de
- * alterações por IP (ou por sessão, quando o IP não é conhecido).
+ * Procedures that change data: besides the session, they go through the
+ * per-IP change limit (per session when the IP is unknown).
  */
-export const procedimentoDeAlteracao = procedimento.use(({ ctx, next }) => {
-  if (ctx.limitador && !ctx.limitador.permitir(ctx.ip ?? ctx.sessao)) {
+export const mutationProcedure = procedure.use(({ ctx, next }) => {
+  if (ctx.limiter && !ctx.limiter.allow(ctx.ip ?? ctx.session)) {
     throw new TRPCError({
       code: "TOO_MANY_REQUESTS",
-      message: "Muitas alterações em pouco tempo. Aguarde um minuto e tente de novo.",
+      message: "Too many changes in a short time. Wait a minute and try again.",
     });
   }
   return next();

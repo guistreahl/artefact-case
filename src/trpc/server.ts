@@ -3,27 +3,27 @@ import { cookies } from "next/headers";
 import { cache } from "react";
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import { appRouter, createCaller } from "@/server/root";
-import { COOKIE_SESSAO, type Contexto } from "@/server/trpc";
-import { repositorio } from "@/server/tarefas/store";
-import { criarQueryClient } from "./query-client";
+import { SESSION_COOKIE, type Context } from "@/server/trpc";
+import { store } from "@/server/tasks/store";
+import { createQueryClient } from "./query-client";
 
 /**
- * Contexto para Server Components. Chama os procedimentos direto, na mesma
- * memória, sem passar por HTTP.
+ * Context for Server Components. Calls the procedures directly, in the same
+ * memory, without going through HTTP.
  */
-const contexto = cache(async (): Promise<Contexto> => {
-  const loja = await cookies();
-  return { sessao: loja.get(COOKIE_SESSAO)?.value, repositorio };
+const context = cache(async (): Promise<Context> => {
+  const jar = await cookies();
+  return { session: jar.get(SESSION_COOKIE)?.value, store };
 });
 
-// Um QueryClient por requisição: o cache() do React garante que ele não é
-// compartilhado entre visitantes.
-export const getQueryClient = cache(criarQueryClient);
+// One QueryClient per request: React's cache() guarantees it is not shared
+// between visitors.
+export const getQueryClient = cache(createQueryClient);
 
 export const trpc = createTRPCOptionsProxy({
-  ctx: contexto,
+  ctx: context,
   router: appRouter,
   queryClient: getQueryClient,
 });
 
-export const caller = createCaller(contexto);
+export const caller = createCaller(context);

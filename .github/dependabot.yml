@@ -1,6 +1,6 @@
-# Só atualizações minor e patch, agrupadas num PR por ecossistema. Versões
-# major mudam APIs (o Next.js 16, por exemplo, sai do escopo do case, que
-# fixa a versão 15) e são avaliadas à parte, não por PR automático.
+# Minor and patch updates only, grouped into one pull request per ecosystem.
+# Major versions change APIs (Next.js 16, for instance, is outside the case,
+# which pins version 15) and are evaluated separately, not by automatic PRs.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -8,7 +8,7 @@ updates:
     schedule:
       interval: weekly
     groups:
-      dependencias:
+      dependencies:
         patterns: ["*"]
     ignore:
       - dependency-name: "*"

@@ -1,8 +1,8 @@
-# Os três primeiros vão em Variables do GitHub (Settings, Secrets and
-# variables, Actions). Sozinhos, não dão acesso a nada.
+# The first three go into the repository's GitHub Variables (Settings, Secrets
+# and variables, Actions). On their own they grant access to nothing.
 
-output "GCP_PROJETO" {
-  value = var.projeto
+output "GCP_PROJECT" {
+  value = var.project
 }
 
 output "GCP_WORKLOAD_IDENTITY_PROVIDER" {
@@ -13,13 +13,13 @@ output "GCP_SERVICE_ACCOUNT" {
   value = google_service_account.deploy.email
 }
 
-output "registros_dns" {
-  description = "O que criar no DNS para o domínio apontar para o Cloud Run."
-  value       = google_cloud_run_domain_mapping.tarefas.status[0].resource_records
+output "dns_records" {
+  description = "What to create in DNS for the domain to point at Cloud Run."
+  value       = google_cloud_run_domain_mapping.domain.status[0].resource_records
 }
 
-output "segredo_origem" {
-  description = "Valor do cabeçalho x-origem-cloudflare, para a regra de transformação do Cloudflare."
-  value       = random_password.segredo_origem.result
+output "origin_secret" {
+  description = "Value of the x-origin-secret header, for Cloudflare's transform rule."
+  value       = random_password.origin_secret.result
   sensitive   = true
 }

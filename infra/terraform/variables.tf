@@ -1,21 +1,21 @@
-variable "projeto" {
-  description = "ID do projeto no Google Cloud. O projeto e o faturamento são criados fora do Terraform."
+variable "project" {
+  description = "Google Cloud project ID. The project and its billing are created outside Terraform."
   type        = string
   default     = "case-artefact-guistreahl"
 }
 
-variable "regiao" {
+variable "region" {
   type    = string
   default = "us-central1"
 }
 
-variable "repositorio_github" {
-  description = "Único repositório autorizado a publicar, no formato dono/nome."
+variable "github_repository" {
+  description = "The only repository allowed to deploy, as owner/name."
   type        = string
   default     = "guistreahl/artefact-case"
 }
 
-variable "dominio" {
+variable "domain" {
   type    = string
   default = "gerenciador.guistreahl.com.br"
 }

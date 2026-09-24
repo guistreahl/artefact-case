@@ -1,11 +1,11 @@
-// Sobe o servidor gerado pelo `output: "standalone"`, o mesmo que roda na
-// imagem Docker. O Next não copia os arquivos estáticos para dentro do
-// standalone; este script faz essa cópia antes de iniciar.
+// Starts the server produced by `output: "standalone"`, the same one that runs
+// in the Docker image. Next does not copy static files into the standalone
+// folder; this script does that before starting.
 import { cpSync, existsSync } from "node:fs";
 
 const standalone = ".next/standalone";
 if (!existsSync(`${standalone}/server.js`)) {
-  console.error("Build não encontrado. Rode `npm run build` antes.");
+  console.error("Build not found. Run `npm run build` first.");
   process.exit(1);
 }
 

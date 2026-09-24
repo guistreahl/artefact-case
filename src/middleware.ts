@@ -1,53 +1,54 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { COOKIE_SESSAO } from "@/server/sessao";
-import { CABECALHO_ORIGEM, origemAutorizada } from "@/server/protecao";
+import { SESSION_COOKIE } from "@/server/session";
+import { ORIGIN_HEADER, isAllowedOrigin } from "@/server/protection";
 
-const UM_ANO = 60 * 60 * 24 * 365;
+const ONE_YEAR = 60 * 60 * 24 * 365;
 
 /**
- * Duas tarefas, nesta ordem.
+ * Two jobs, in this order.
  *
- * 1. Recusa o que não passou pelo Cloudflare. Em produção, o Cloudflare
- *    acrescenta um cabeçalho com um segredo, e quem tenta chegar direto ao
- *    Cloud Run (pelo endereço run.app ou pelos IPs do Google) não o tem.
+ * 1. Rejects whatever did not go through Cloudflare. In production,
+ *    Cloudflare adds a header carrying a secret, and anyone trying to reach
+ *    Cloud Run directly (through the run.app address or Google's IPs) does
+ *    not have it.
  *
- * 2. Garante que toda requisição tenha o cookie de sessão.
+ * 2. Makes sure every request has the session cookie.
  *
- * Na primeira visita, o id novo é gravado na resposta, para o navegador, e
- * também na própria requisição. Sem esta segunda parte, o SSR da primeira
- * visita não enxergaria o cookie, que só chega ao servidor a partir da
- * requisição seguinte.
+ * On the first visit, the new id is written to the response, for the
+ * browser, and also to the request itself. Without the second part, the SSR
+ * of the first visit would not see the cookie, which only reaches the server
+ * from the following request on.
  */
 export function middleware(request: NextRequest) {
-  if (!origemAutorizada(request.headers.get(CABECALHO_ORIGEM), process.env.ORIGEM_SEGREDO)) {
-    return new NextResponse("Acesso negado.", { status: 403 });
+  if (!isAllowedOrigin(request.headers.get(ORIGIN_HEADER), process.env.ORIGIN_SECRET)) {
+    return new NextResponse("Access denied.", { status: 403 });
   }
 
-  if (request.cookies.has(COOKIE_SESSAO)) return NextResponse.next();
+  if (request.cookies.has(SESSION_COOKIE)) return NextResponse.next();
 
-  const sessao = crypto.randomUUID();
-  request.cookies.set(COOKIE_SESSAO, sessao);
-  const resposta = NextResponse.next({ request: { headers: request.headers } });
+  const session = crypto.randomUUID();
+  request.cookies.set(SESSION_COOKIE, session);
+  const response = NextResponse.next({ request: { headers: request.headers } });
 
-  // O Cloud Run termina o TLS e repassa em HTTP, com o protocolo original
-  // neste cabeçalho. Localmente, em http://localhost, o cookie fica sem Secure.
-  const https =
-    request.headers.get("x-forwarded-proto") === "https" || request.nextUrl.protocol === "https:";
+  // Cloud Run terminates TLS and forwards over HTTP, with the original
+  // protocol in this header. Locally, on http://localhost, the cookie is not
+  // Secure.
+  const https = request.headers.get("x-forwarded-proto") === "https" || request.nextUrl.protocol === "https:";
 
-  resposta.cookies.set(COOKIE_SESSAO, sessao, {
+  response.cookies.set(SESSION_COOKIE, session, {
     httpOnly: true,
     sameSite: "lax",
     secure: https,
     path: "/",
-    maxAge: UM_ANO,
+    maxAge: ONE_YEAR,
   });
-  return resposta;
+  return response;
 }
 
 export const config = {
-  // Runtime Node, e não Edge: o segredo é lido do ambiente na execução, e não
-  // fixado no momento do build.
+  // Node runtime, not Edge: the secret is read from the environment at run
+  // time, not baked in at build time.
   runtime: "nodejs",
-  // /api/saude fica de fora: a sonda do Cloud Run não passa pelo Cloudflare.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|api/saude).*)"],
+  // /api/health is left out: Cloud Run's probe does not go through Cloudflare.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|api/health).*)"],
 };

@@ -1,8 +1,8 @@
-# Publica no Cloud Run cada commit da main que passou no CI.
+# Publishes to Cloud Run every main commit that passed CI.
 #
-# Autenticação por Workload Identity Federation: o GitHub prova por OIDC que a
-# execução veio deste repositório, na main, e o Google devolve uma credencial
-# de vida curta. Não existe chave de service account guardada em lugar nenhum.
+# Authentication through Workload Identity Federation: GitHub proves via OIDC
+# that the run came from this repository, on main, and Google returns a
+# short-lived credential. No service account key is stored anywhere.
 
 name: deploy
 
@@ -13,18 +13,21 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Um deploy de cada vez, em fila. Sem cancelamento: interromper um deploy no
-# meio deixa o serviço num estado que ninguém escolheu.
+# One deploy at a time, queued. No cancelling: interrupting a deploy midway
+# leaves the service in a state nobody chose.
 concurrency:
   group: deploy
   cancel-in-progress: false
 
 env:
-  PROJETO: ${{ vars.GCP_PROJETO }}
-  REGIAO: us-central1
-  SERVICO: tarefas
-  REPOSITORIO: servicos
-  DOMINIO: gerenciador.guistreahl.com.br
+  PROJECT: ${{ vars.GCP_PROJECT }}
+  REGION: us-central1
+  # Names of resources already created in Google Cloud. Renaming them would
+  # recreate the service and its domain certificate.
+  SERVICE: tarefas
+  REPOSITORY: servicos
+  SECRET: segredo-origem
+  DOMAIN: gerenciador.guistreahl.com.br
 
 jobs:
   deploy:
@@ -33,20 +36,20 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
-      id-token: write # emite o token OIDC trocado pela credencial do Google
+      id-token: write # issues the OIDC token exchanged for the Google credential
 
     steps:
       - uses: actions/checkout@v4
         with:
-          # O commit que passou no CI, e não o que estiver na main agora.
+          # The commit that passed CI, not whatever is on main right now.
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
-      - name: Identificar a versão
+      - name: Identify the version
         run: |
           SHA=$(git rev-parse HEAD)
           echo "SHA=$SHA" >> "$GITHUB_ENV"
           echo "TAG=sha-${SHA:0:7}" >> "$GITHUB_ENV"
-          echo "IMAGEM=${REGIAO}-docker.pkg.dev/${PROJETO}/${REPOSITORIO}/${SERVICO}:${SHA}" >> "$GITHUB_ENV"
+          echo "IMAGE=${REGION}-docker.pkg.dev/${PROJECT}/${REPOSITORY}/${SERVICE}:${SHA}" >> "$GITHUB_ENV"
 
       - uses: google-github-actions/auth@v2
         with:
@@ -55,67 +58,68 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
-      - name: Montar e publicar a imagem
+      - name: Build and publish the image
         run: |
-          gcloud auth configure-docker "${REGIAO}-docker.pkg.dev" --quiet
-          docker build -f infra/docker/Dockerfile -t "$IMAGEM" .
-          docker push "$IMAGEM"
+          gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+          docker build -f infra/docker/Dockerfile -t "$IMAGE" .
+          docker push "$IMAGE"
 
-      - name: Criar a revisão, sem tráfego
+      - name: Create the revision, with no traffic
         run: |
-          gcloud run deploy "$SERVICO" \
-            --image "$IMAGEM" \
-            --region "$REGIAO" \
+          gcloud run deploy "$SERVICE" \
+            --image "$IMAGE" \
+            --region "$REGION" \
             --no-traffic \
             --tag "$TAG" \
             --quiet
-          URL=$(gcloud run services describe "$SERVICO" --region "$REGIAO" --format=json \
+          URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --format=json \
             | jq -r --arg tag "$TAG" '.status.traffic[] | select(.tag == $tag) | .url')
-          echo "URL_REVISAO=$URL" >> "$GITHUB_ENV"
-          echo "Revisão nova em $URL"
+          echo "REVISION_URL=$URL" >> "$GITHUB_ENV"
+          echo "New revision at $URL"
 
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: npm
 
-      - name: Ler o segredo de origem
-        # Em produção, a aplicação recusa o que não traz o cabeçalho que o
-        # Cloudflare acrescenta. Para testar a revisão direto no Cloud Run, a
-        # esteira lê o mesmo valor do Secret Manager, mascarado no log.
+      - name: Read the origin secret
+        # In production the app rejects requests without the header Cloudflare
+        # adds. To test the revision directly on Cloud Run, the pipeline reads
+        # the same value from Secret Manager, masked in the log.
         run: |
-          SEGREDO=$(gcloud secrets versions access latest --secret=segredo-origem --project "$PROJETO")
-          echo "::add-mask::$SEGREDO"
-          echo "CABECALHO_ORIGEM=$SEGREDO" >> "$GITHUB_ENV"
+          VALUE=$(gcloud secrets versions access latest --secret="$SECRET" --project "$PROJECT")
+          echo "::add-mask::$VALUE"
+          echo "ORIGIN_SECRET=$VALUE" >> "$GITHUB_ENV"
 
-      - name: Testar a revisão nova antes de liberar
+      - name: Test the new revision before releasing it
         env:
-          BASE_URL: ${{ env.URL_REVISAO }}
+          BASE_URL: ${{ env.REVISION_URL }}
         run: |
           npm ci
           npx playwright install --with-deps chromium
           npm run test:e2e
 
-      - name: Liberar o tráfego
+      - name: Release the traffic
         run: |
-          gcloud run services update-traffic "$SERVICO" --region "$REGIAO" --to-tags "$TAG=100" --quiet
-          # As tags só servem para testar cada revisão antes de liberar. As
-          # antigas saem, para a lista não crescer a cada deploy.
-          ANTIGAS=$(gcloud run services describe "$SERVICO" --region "$REGIAO" --format=json \
+          gcloud run services update-traffic "$SERVICE" --region "$REGION" --to-tags "$TAG=100" --quiet
+          # Tags only exist to test each revision before release. Old ones are
+          # removed, so the list does not grow with every deploy.
+          OLD=$(gcloud run services describe "$SERVICE" --region "$REGION" --format=json \
             | jq -r --arg tag "$TAG" '[.status.traffic[] | select(.tag and .tag != $tag) | .tag] | join(",")')
-          if [ -n "$ANTIGAS" ]; then
-            gcloud run services update-traffic "$SERVICO" --region "$REGIAO" --remove-tags "$ANTIGAS" --quiet
+          if [ -n "$OLD" ]; then
+            gcloud run services update-traffic "$SERVICE" --region "$REGION" --remove-tags "$OLD" --quiet
           fi
 
-      - name: Conferir o serviço no ar
+      - name: Check the service is up
         run: |
-          URL=$(gcloud run services describe "$SERVICO" --region "$REGIAO" --format='value(status.url)')
-          curl -fsS "$URL/api/saude"
-          # O domínio passa pelo Cloudflare, que desafia quem não é navegador
-          # (403 aqui é o esperado). Só a falta de resposta é problema, e mesmo
-          # assim não derruba o deploy: DNS e certificado ficam fora da esteira.
-          CODIGO=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 10 "https://${DOMINIO}/" || true)
-          echo "https://${DOMINIO} respondeu $CODIGO"
-          if [ "$CODIGO" = "000" ]; then
-            echo "::warning::https://${DOMINIO} não respondeu. Conferir DNS e certificado."
+          URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --format='value(status.url)')
+          curl -fsS "$URL/api/health"
+          # The domain goes through Cloudflare, which challenges anything that
+          # is not a browser (403 here is expected). Only no answer at all is a
+          # problem, and even then the deploy does not fail: DNS and the
+          # certificate live outside the pipeline.
+          CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 10 "https://${DOMAIN}/" || true)
+          echo "https://${DOMAIN} answered $CODE"
+          if [ "$CODE" = "000" ]; then
+            echo "::warning::https://${DOMAIN} did not answer. Check DNS and the certificate."
           fi

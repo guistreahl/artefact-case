@@ -1,11 +1,11 @@
-# Imagem de produção. Três estágios: só o último vai para o Cloud Run, sem
-# código-fonte, sem dependências de desenvolvimento e sem cache de build.
+# Production image. Three stages: only the last one goes to Cloud Run, with
+# no source code, no dev dependencies and no build cache.
 #
-# O contexto de build é a raiz do repositório:
+# The build context is the repository root:
 #   docker build -f infra/docker/Dockerfile .
-# As exclusões do contexto estão em Dockerfile.dockerignore, ao lado deste.
+# Context exclusions live in Dockerfile.dockerignore, next to this file.
 
-FROM node:22-alpine AS dependencias
+FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
@@ -13,19 +13,19 @@ RUN npm ci --no-audit --no-fund
 FROM node:22-alpine AS build
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
-COPY --from=dependencias /app/node_modules ./node_modules
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
-FROM node:22-alpine AS execucao
+FROM node:22-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     HOSTNAME=0.0.0.0 \
     PORT=8080
 
-# O standalone já traz o servidor e só as dependências que ele usa. Os
-# estáticos não vêm junto e são copiados à parte.
+# The standalone output already contains the server and only the
+# dependencies it uses. Static files are not included and are copied apart.
 COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
 

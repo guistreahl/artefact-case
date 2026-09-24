@@ -12,8 +12,9 @@ terraform {
     }
   }
 
-  # O bucket é criado antes do primeiro `terraform init`, junto com o projeto.
-  # Tem versionamento ligado: um estado corrompido volta para a versão anterior.
+  # The bucket is created before the first `terraform init`, together with the
+  # project. Versioning is on: a corrupted state rolls back to the previous
+  # version. The prefix keeps its original name so the state is not lost.
   backend "gcs" {
     bucket = "case-artefact-guistreahl-tfstate"
     prefix = "tarefas"
@@ -21,6 +22,6 @@ terraform {
 }
 
 provider "google" {
-  project = var.projeto
-  region  = var.regiao
+  project = var.project
+  region  = var.region
 }

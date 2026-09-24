@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
-// Nenhum robô é bem-vindo. Os que respeitam o robots.txt param aqui; os que
-// não respeitam encontram o desafio do Cloudflare e o limite de alterações.
+// No robot is welcome. The ones that honour robots.txt stop here; the ones
+// that do not run into Cloudflare's challenge and the change limit.
 export default function robots(): MetadataRoute.Robots {
   return { rules: { userAgent: "*", disallow: "/" } };
 }

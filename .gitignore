@@ -1,17 +1,17 @@
-# dependências e build
+# dependencies and build
 node_modules/
 .next/
 out/
 *.tsbuildinfo
 next-env.d.ts
 
-# testes
+# tests
 coverage/
-tests/resultados/
+tests/results/
 playwright-report/
 playwright/.cache/
 
-# nunca versionar: segredos, estado do Terraform, material do enunciado
+# never commit: secrets, Terraform state, the case's source material
 material/
 .env*
 *.pem
@@ -22,6 +22,6 @@ material/
 .terraform/
 *.pdf
 
-# sistema
+# system
 .DS_Store
 Thumbs.db

@@ -1,13 +1,13 @@
-<h1 align="center">Gerenciador de tarefas</h1>
+<h1 align="center">Task manager</h1>
 
 <p align="center">
-  Criar, listar, editar, concluir e excluir tarefas.<br>
-  Next.js 15 com tRPC, listagem renderizada no servidor e rolagem infinita.
+  Create, list, edit, complete and delete tasks.<br>
+  Next.js 15 with tRPC, server-side rendered list and infinite scroll.
 </p>
 
 <p align="center">
   <a href="https://gerenciador.guistreahl.com.br">
-    <img src="https://img.shields.io/badge/Abrir_a_aplica%C3%A7%C3%A3o-E0005C?style=for-the-badge" alt="Abrir a aplicação" height="36">
+    <img src="https://img.shields.io/badge/Open_the_app-E0005C?style=for-the-badge" alt="Open the app" height="36">
   </a>
 </p>
 
@@ -17,122 +17,137 @@
 </p>
 
 <p align="center">
-  <img src="docs/img/demo.gif" width="800" alt="Demonstração: o painel de boas-vindas é fechado, uma tarefa é marcada como concluída, uma tarefa nova é criada e a lista é rolada até carregar mais itens.">
+  <img src="docs/img/demo.gif" width="800" alt="Demo: the welcome panel is closed, a task is completed, a task is dragged to the top, a task is deleted after confirmation, a new task is created and the list is scrolled to load more.">
 </p>
 
-Na primeira visita, um painel explica como usar, e as seis primeiras tarefas
-da lista são um roteiro para experimentar cada função. O painel volta pelo
-link **Como usar**, no topo.
+On the first visit, a panel explains how to use the app, and the first six
+tasks in the list are a walkthrough to try every feature. The panel comes back
+through the **How to use** link at the top.
 
-## Rodar localmente
+## What the case asked
 
-Requer Node.js 22 ou mais recente.
+Every requirement of the case, and where it lives:
+
+| Requirement | Where |
+|---|---|
+| Next.js 15 + tRPC, frontend consuming the backend | `src/trpc/`, `src/app/api/trpc/` |
+| Task with `id`, `titulo` (required), `descricao` (optional), `dataCriacao` | `src/server/tasks/schema.ts` |
+| Create, list, update and delete via tRPC, in memory | `src/server/tasks/router.ts`, `store.ts` |
+| No task without a title, meaningful errors (`NOT_FOUND`, `BAD_REQUEST`) | `schema.ts`, `router.ts` |
+| List with SSR, delete from the list with success and error feedback | `src/app/page.tsx`, `src/components/TaskList.tsx` |
+| Create and edit form with hooks and validation | `src/components/TaskForm.tsx` |
+| Loading, success and failure states | `TaskForm.tsx`, `TaskList.tsx`, `Toasts.tsx` |
+| Bonus: infinite scroll | `TaskList.tsx` (cursor pagination) |
+| Bonus: comments and README | the whole repository, plus [`docs/SDD.md`](docs/SDD.md) |
+
+## Beyond the case
+
+Each addition has a reason, detailed in the [SDD](docs/SDD.md):
+
+1. **Complete with a timestamp.** Ticking a task records when it was done.
+2. **Confirmation before deleting**, in a keyboard-accessible dialog.
+3. **Manual order.** Tasks can be dragged up and down, with mouse, touch or
+   keyboard, and the order is kept on the server.
+4. **One list per visitor.** An anonymous cookie keeps lists apart, so anyone
+   opening the public address only sees what they created.
+5. **Optimistic updates.** Deleting, completing and moving change the screen
+   at once and roll back, with a notice, if the server refuses.
+6. **Deployed on Cloud Run** through CI/CD, with infrastructure as Terraform
+   and protection against robots.
+
+## Run locally
+
+Requires Node.js 22 or newer.
 
 ```bash
 npm install
 npm run dev
 ```
 
-Abre em <http://localhost:3000>. Nenhuma variável de ambiente é necessária.
+Opens at <http://localhost:3000>. No environment variable is needed.
 
-Para rodar o build de produção, o mesmo servidor que vai para a imagem Docker:
+To run the production build, the same server that goes into the Docker image:
 
 ```bash
 npm run build
 npm start
 ```
 
-Ou com Docker, sem instalar Node:
+Or with Docker, without installing Node:
 
 ```bash
-docker build -f infra/docker/Dockerfile -t tarefas .
-docker run -p 8080:8080 tarefas
+docker build -f infra/docker/Dockerfile -t tasks .
+docker run -p 8080:8080 tasks
 ```
 
-## Testes
+## Tests
 
 ```bash
-npm test                          # unidade (Vitest), direto no router do tRPC
-npx playwright install chromium   # só na primeira vez
-npm run build && npm run test:e2e # navegador (Playwright), contra o build de produção
+npm test                          # unit (Vitest), straight on the tRPC router
+npx playwright install chromium   # first time only
+npm run build && npm run test:e2e # browser (Playwright), against the production build
 ```
 
-## Como funciona
+## How it works
 
 ```
-navegador ──► Next.js (App Router)
-                 ├─ Server Components ── chamada direta ──┐
-                 └─ /api/trpc ◄── cliente tRPC ◄── React  │
-                                   │                      │
-                                   ▼                      ▼
-                              router tRPC ──► Map em memória, uma lista por visitante
+browser ──► Next.js (App Router)
+               ├─ Server Components ── direct call ─────┐
+               └─ /api/trpc ◄── tRPC client ◄── React    │
+                                  │                      │
+                                  ▼                      ▼
+                             tRPC router ──► in-memory Map, one list per visitor
 ```
 
-1. **Listagem com SSR.** A página `/` busca a primeira página de tarefas no
-   servidor e entrega o HTML pronto. O mesmo dado vai para o cache do
-   TanStack Query no cliente, que continua a rolagem a partir dele.
-2. **Rolagem infinita** por cursor: 10 tarefas por vez, carregadas quando o
-   fim da lista se aproxima da tela.
-3. **Um schema, dois lugares.** O schema Zod de `src/server/tarefas/schema.ts`
-   valida o formulário no navegador e a entrada no servidor.
-4. **Erros com significado.** `NOT_FOUND` para tarefa inexistente,
-   `BAD_REQUEST` com a mensagem de cada campo. O formulário mostra o erro
-   embaixo do campo; a lista mostra avisos de sucesso e de erro.
-5. **Confirmação antes de excluir**, num diálogo acessível pelo teclado.
-6. **Ordem manual.** As tarefas são arrastáveis para cima e para baixo, com
-   mouse, toque ou teclado, e a ordem fica guardada no servidor.
-7. **Conclusão com horário.** Marcar uma tarefa registra quando ela foi
-   concluída; reabrir apaga o registro.
-8. **Atualizações otimistas.** Excluir, concluir e mover mudam a tela na
-   hora, e ela volta ao estado anterior, com aviso, se o servidor recusar. Os
-   avisos flutuam no alto da janela, visíveis em qualquer ponto da rolagem.
-9. **Uma lista por visitante.** Um cookie anônimo separa as listas, para que
-   quem abre o endereço público veja só o que criou. Toda lista nova começa
-   com 30 tarefas fictícias de exemplo.
-10. **Identidade visual** inspirada na da Artefact: marinho, magenta,
-   turquesa e Roboto, definidos como tokens em `src/app/globals.css`.
+1. **List with SSR.** The `/` page fetches the first page of tasks on the
+   server and sends the HTML ready. The same data goes into the TanStack Query
+   cache on the client, which continues the scroll from it.
+2. **Infinite scroll** by cursor: 10 tasks at a time, loaded as the end of the
+   list gets close to the screen.
+3. **One schema, two places.** The Zod schema in `src/server/tasks/schema.ts`
+   validates the form in the browser and the input on the server.
+4. **In memory, by design.** The list resets when the server restarts. On
+   Cloud Run that happens after a few minutes without traffic. The case does
+   not require persistence.
 
-Como tudo fica em memória, a lista recomeça quando o servidor reinicia. No
-Cloud Run, isso acontece depois de alguns minutos sem acesso.
+Field names follow the case (`titulo`, `descricao`, `dataCriacao`); the rest
+of the code is in English.
 
-A arquitetura completa, com as decisões e a infraestrutura, está em
-[`docs/SDD.md`](docs/SDD.md).
-
-## Estrutura
+## Structure
 
 ```
 src/
-  app/               rotas do Next.js
-  components/        lista, formulário, diálogo e avisos
-  server/            backend: schema, store em memória, router tRPC, proteção
-  trpc/              ligação do tRPC com o React e com os Server Components
-  lib/               constantes e formatação compartilhadas
+  app/               Next.js routes
+  components/        list, form, dialog and notices
+  server/            backend: schema, in-memory store, tRPC router, protection
+  trpc/              tRPC wiring for React and for Server Components
+  lib/               shared constants and formatting
 tests/
-  e2e/               testes de navegador (Playwright)
-  *.config.ts        configuração do Vitest e do Playwright
+  e2e/               browser tests (Playwright)
+  *.config.ts        Vitest and Playwright configuration
 infra/
-  terraform/         recursos do Google Cloud
-  docker/            imagem de produção
-docs/                SDD e a demonstração do README
-scripts/             sobe o build standalone localmente
-.github/             CI, deploy e Dependabot
+  terraform/         Google Cloud resources
+  docker/            production image
+docs/                SDD and the README demo
+scripts/             starts the standalone build locally
+.github/             CI, deploy and Dependabot
 ```
 
-Os testes de unidade ficam ao lado do código que testam, em
-`src/**/*.test.ts`.
+Unit tests live next to the code they test, in `src/**/*.test.ts`.
 
 ## Deploy
 
-Cada push na `main` que passa no CI é publicado no Cloud Run:
+Every push to `main` that passes CI is published to Cloud Run:
 
-1. A imagem é montada e publicada no Artifact Registry.
-2. Uma revisão nova sobe **sem tráfego**, numa URL própria.
-3. Os testes do Playwright rodam contra essa URL.
-4. Só então a revisão passa a receber 100% do tráfego.
+1. The image is built and pushed to Artifact Registry.
+2. A new revision starts **with no traffic**, on its own URL.
+3. The Playwright tests run against that URL.
+4. Only then does the revision get 100% of the traffic.
 
-A autenticação no Google usa Workload Identity Federation, sem chave de
-service account. A infraestrutura está descrita em [`infra/terraform/`](infra/terraform/).
+Authentication to Google uses Workload Identity Federation, with no service
+account key. The infrastructure is described in
+[`infra/terraform/`](infra/terraform/).
 
-O domínio passa pelo Cloudflare, que desafia robôs e limita requisições por
-IP. A aplicação recusa o que não passou por ele, então o endereço direto do
-Cloud Run também fica protegido.
+The domain goes through Cloudflare, which challenges robots and rate-limits
+by IP. The app rejects anything that did not go through Cloudflare, so the
+direct Cloud Run address is protected too.
