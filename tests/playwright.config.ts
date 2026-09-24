@@ -6,6 +6,7 @@ const urlExterna = process.env.BASE_URL;
 
 export default defineConfig({
   testDir: "e2e",
+  outputDir: "resultados",
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
@@ -25,6 +26,8 @@ export default defineConfig({
     ? undefined
     : {
         command: "npm run start",
+        // O servidor sobe da raiz do projeto, uma pasta acima desta.
+        cwd: "..",
         url: "http://localhost:3000/api/saude",
         reuseExistingServer: !process.env.CI,
       },

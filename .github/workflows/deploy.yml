@@ -58,7 +58,7 @@ jobs:
       - name: Montar e publicar a imagem
         run: |
           gcloud auth configure-docker "${REGIAO}-docker.pkg.dev" --quiet
-          docker build -t "$IMAGEM" .
+          docker build -f infra/docker/Dockerfile -t "$IMAGEM" .
           docker push "$IMAGEM"
 
       - name: Criar a revisão, sem tráfego

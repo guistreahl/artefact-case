@@ -1,5 +1,9 @@
 # Imagem de produção. Três estágios: só o último vai para o Cloud Run, sem
 # código-fonte, sem dependências de desenvolvimento e sem cache de build.
+#
+# O contexto de build é a raiz do repositório:
+#   docker build -f infra/docker/Dockerfile .
+# As exclusões do contexto estão em Dockerfile.dockerignore, ao lado deste.
 
 FROM node:22-alpine AS dependencias
 WORKDIR /app

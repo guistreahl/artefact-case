@@ -49,7 +49,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: test-results/
+          path: tests/resultados/
           retention-days: 7
 
   imagem:
@@ -64,6 +64,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: infra/docker/Dockerfile
           push: false
           load: true
           tags: tarefas:ci
@@ -86,6 +87,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
-      - run: terraform -chdir=infra fmt -check -recursive
-      - run: terraform -chdir=infra init -backend=false -input=false
-      - run: terraform -chdir=infra validate
+      - run: terraform -chdir=infra/terraform fmt -check -recursive
+      - run: terraform -chdir=infra/terraform init -backend=false -input=false
+      - run: terraform -chdir=infra/terraform validate

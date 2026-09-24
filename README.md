@@ -45,7 +45,7 @@ npm start
 Ou com Docker, sem instalar Node:
 
 ```bash
-docker build -t tarefas .
+docker build -f infra/docker/Dockerfile -t tarefas .
 docker run -p 8080:8080 tarefas
 ```
 
@@ -102,14 +102,24 @@ A arquitetura completa, com as decisões e a infraestrutura, está em
 
 ```
 src/
-  server/            backend: schema, store em memória, router tRPC
-  trpc/              ligação do tRPC com o React (cliente) e com os Server Components
   app/               rotas do Next.js
-  components/        lista, formulário e avisos
-e2e/                 testes do Playwright
-infra/               Terraform do Google Cloud
-.github/workflows/   CI e deploy
+  components/        lista, formulário, diálogo e avisos
+  server/            backend: schema, store em memória, router tRPC, proteção
+  trpc/              ligação do tRPC com o React e com os Server Components
+  lib/               constantes e formatação compartilhadas
+tests/
+  e2e/               testes de navegador (Playwright)
+  *.config.ts        configuração do Vitest e do Playwright
+infra/
+  terraform/         recursos do Google Cloud
+  docker/            imagem de produção
+docs/                SDD e a demonstração do README
+scripts/             sobe o build standalone localmente
+.github/             CI, deploy e Dependabot
 ```
+
+Os testes de unidade ficam ao lado do código que testam, em
+`src/**/*.test.ts`.
 
 ## Deploy
 
@@ -121,7 +131,7 @@ Cada push na `main` que passa no CI é publicado no Cloud Run:
 4. Só então a revisão passa a receber 100% do tráfego.
 
 A autenticação no Google usa Workload Identity Federation, sem chave de
-service account. A infraestrutura está descrita em [`infra/`](infra/).
+service account. A infraestrutura está descrita em [`infra/terraform/`](infra/terraform/).
 
 O domínio passa pelo Cloudflare, que desafia robôs e limita requisições por
 IP. A aplicação recusa o que não passou por ele, então o endereço direto do

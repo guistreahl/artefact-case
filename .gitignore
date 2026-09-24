@@ -7,11 +7,12 @@ next-env.d.ts
 
 # testes
 coverage/
-test-results/
+tests/resultados/
 playwright-report/
 playwright/.cache/
 
 # nunca versionar: segredos, estado do Terraform, material do enunciado
+material/
 .env*
 *.pem
 *.tfstate

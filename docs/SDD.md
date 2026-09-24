@@ -119,8 +119,13 @@ src/
     BoasVindas.tsx         painel da primeira visita
     ConfirmarExclusao.tsx  diálogo "Você deseja excluir esta tarefa?"
   middleware.ts            emite o cookie de sessão na primeira visita
-e2e/                       testes do Playwright
-infra/                     Terraform
+tests/
+  e2e/                     testes do Playwright
+  playwright.config.ts
+  vitest.config.ts         testes de unidade ficam em src/**/*.test.ts
+infra/
+  terraform/               recursos do Google Cloud
+  docker/                  Dockerfile e Dockerfile.dockerignore
 scripts/iniciar.mjs        sobe o build standalone localmente
 ```
 
@@ -313,7 +318,7 @@ DNS: CNAME gerenciador ► ghs.googlehosted.com + domain mapping do Cloud Run
 
 ### 4.2 Recursos
 
-Todos descritos em Terraform, em `infra/`.
+Todos descritos em Terraform, em `infra/terraform/`.
 
 | Recurso | Configuração |
 |---|---|
@@ -349,7 +354,7 @@ comportamento esperado.
 
 ### 4.4 Imagem
 
-Dockerfile em três estágios (dependências, build, execução) sobre
+`infra/docker/Dockerfile`, em três estágios (dependências, build, execução) sobre
 `node:22-alpine`, com o `output: 'standalone'` do Next. A imagem final roda
 com usuário sem privilégio e escuta na porta recebida em `PORT`.
 

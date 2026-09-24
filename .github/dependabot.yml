@@ -1,3 +1,6 @@
+# Só atualizações minor e patch, agrupadas num PR por ecossistema. Versões
+# major mudam APIs (o Next.js 16, por exemplo, sai do escopo do case, que
+# fixa a versão 15) e são avaliadas à parte, não por PR automático.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -8,10 +11,7 @@ updates:
       dependencias:
         patterns: ["*"]
     ignore:
-      # O case fixa o Next.js 15.
-      - dependency-name: next
-        update-types: ["version-update:semver-major"]
-      - dependency-name: eslint-config-next
+      - dependency-name: "*"
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
@@ -21,3 +21,14 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: terraform
+    directory: /infra/terraform
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
